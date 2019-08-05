@@ -20,4 +20,4 @@ This is a work-in-progress.  Right now, the program can only handle 20x20 meshes
 * write a node-OpenCL version of solver
 * wait for tensorflow.js to add lin-solve
 
-All of this fixes are pretty difficult.  If anyone is aware of a GPU-accelerated linear system solver (not just mult and add), please let me know.  
+All of this fixes are pretty difficult.  If anyone is aware of a GPU-accelerated linear system solver (not just mult and add), please let me know.  Also, sushi.js is awesome for matrices < [500x500].  However, it doesn't have a linear-solver.  Only a matrix inverter (too expensive).  The linear solver in version top_2 used same approach as sushi: work with 1d Float32Arrays, but saves on cost because it just solves (not invert) the matrix.
