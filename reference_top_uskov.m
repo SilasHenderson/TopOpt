@@ -21,9 +21,9 @@ edofMat  = repmat(edofVec,1,8) + ...
 iK       = reshape(kron(edofMat,ones(8,1))',[],1);
 jK       = reshape(kron(edofMat,ones(1,8))',[],1);
 
-U  = zeros(ndof,1);             x    = repmat(volfrac,nel,1);   % Other           
+U  = zeros(ndof,1);             x    = repmat(volfrac,nel,1);             
 lm = 0;                         reta = (etamax/eta)^(1/nloop);  
-                                                                % K0                         
+                                                                                     
 a  = [12 3 -6 3 0 -6 -3 -3];    i1   = [1 2 3 8; 2 1 4 5; 3 4 1 7; 8 5 7 1];  
 b  = [-4 3 -2 -9 4 2 -3 9];     i2   = [6 7 5 4; 7 6 8 3; 5 8 6 2; 4 3 2 6];
 k  = (a+nu*b)/(24*(1-nu^2));    KE   = k([i1 i2; i2 i1]);    
