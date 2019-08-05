@@ -1,0 +1,457 @@
+<!-- finite-lite - - - - - - - - - - - - - - - - - - - - - - - - $:\^$# -->
+
+<!-- - - - - - Document Layout (HTML) - - - - - - - - - - - - - - - - - - - - -->
+<!DOCTYPE html> <html> <head> <style> 
+	body {  background-color:#333333;}
+	.key {  top:0%;         height:5%;      color:#bbbbbb;   
+          	width:5%;   	position:fixed;	background-color:#333333;
+        	border:none;	font-size:16px; }
+	.key:hover { background-color: #334433; }
+	.key:active{ background-color: #333344; } </style> </head> <body> 
+
+<button class="key" onmousedown="key_open()" style="left:0%;"> Open</button>
+<button class="key" onmousedown="key_save()" style="left:5%;"> Save</button>
+<button class="key" onmousedown="key_new()"  style="left:10%;"> New</button>
+
+<textarea id='paper' spellcheck = 'false'
+    style="top:5%;      height:95%;     position:fixed; background-color:#dde3ee;
+           left:0%;     width:50%;    	font-size:16px;	color:#000000;
+           border:none; outline:none;   padding:0;      resize:none;"> </textarea>
+
+<canvas id='canvas' 
+    style="top:5%;       height:55%;    background-color:#d7d9d8;
+           left:50%;     width:50%;     position:fixed;"> </canvas>
+
+<div id='printout' 
+    style="top:61%;      height:44%;    background-color:#eaeaea;
+           left:50%;     width:50%;     color:#000000; 
+           font-size:16px; position:fixed;"> </div>
+
+<script src='sushi.js'> </script> <script> 
+
+/*------------------------ Document Layout (Javascript) -----------------*/
+var printout = document.getElementById('printout');
+var paper    = document.getElementById('paper');
+var canvas   = document.getElementById('canvas');
+	var lims   = canvas.getBoundingClientRect();
+	var cxMid  = lims.x + lims.width/2;		var cxRad = lims.width/2;  
+	var cyMid  = lims.y + lims.height/2;    var cyRad = lims.height/2; 
+	var aspect = cxRad/cyRad;
+	canvas.width  = 2*cxRad;
+	canvas.height = 2*cyRad;
+
+var axis = canvas.getContext("2d");			
+	var axMid =  0; 				var ayMid = 0;
+	var axRad = 10*aspect; 			var ayRad = 10; 
+	axis.imageSmoothingEnabled = false;
+
+var shiftDown = 0; 	var enterDown = 0;
+
+var paper_color      = '#d7d9d8';	var paper_text_color    = '#000000';   
+var printout_color   = '#444444'; 	var printout_text_color = '#000000';
+var canvas_color     = '#d7d9d8';   
+var element_color    = '#334433';	var u_color             = '#4444aa';	
+var fixed_color      = '#555555';	var force_color         = '#880000';
+var grid_color       = '#222222';	var grid_text_color     = '#441111';
+var el_label_color   = '#994444';	var node_label_color    = '#ffffff';
+
+var starter_code = `// press shift+enter to execute code
+
+E = 10;
+
+nodes       = [[1, 5], [5, 5], [1, 1]];
+elements    = [[1, 2], [2, 3]];
+node_force  = [2, 0, -1];
+fixed_nodes = [1, 3];
+
+areas       = [10, 1];
+area_min    = .1;
+area_max    =  5;
+max_volume  = 20;  
+// scale_areas_to_maxvol();
+
+solve(); 
+draw();
+// optimize(1000);`;
+
+let starter_print = 
+`Finite-Lite is a 100% free javascript program for FEA. It runs, without setup or plugins, on every browser.  Matrix operations are performed with 
+	 <a href = 'http://www.visual-math.com/sushi.js'> Sushi.js</a>, 
+	 an open-source .js file from <a href = 'https://github.com/mil-tokyo'> 
+     University of Tokyo Machine Intelligence Laboratory</a>
+	 <br/> <br/> How it works: Page layout with standard html elements. Onload, javascript variables/functions defined. (shift+enter) tells javascript to eval() the code in the left textbox. 
+
+	<br/> <br/> To get/view source code for finite-lite, press cntrl+u`;
+/*------------------ GUI Functions: Keyboard and Buttons ----------------*/
+document.onkeydown = function(e) {
+	if (e.key == 'Shift') {shiftDown = 1;}
+	if (e.key == 'Enter') {
+		enterDown = 1;
+		if (shiftDown == 1 && enterDown == 1) {
+			clear_data();
+			eval(paper.value);
+			e.preventDefault();}}}
+
+document.onkeyup = function(e) {
+	if (e.key == 'Shift') {shiftDown = 0;}
+	if (e.key == 'Enter') {enterDown = 0;}}
+
+function key_open() { paper.value = localStorage.script; 
+	                  print('--script retrieved from local browser memory--');}
+function key_save() { localStorage.script = paper.value; 
+	                  print('--script saved to local browser memory--');}
+function key_new()  { clear_canvas();  				clear_data();
+                      paper.value = starter_code; 	eval(paper.value);
+                      print('-- new script opened --')}
+
+/*--------------------------- Global Variables --------------------------*/
+var nodes       =  [];	var elements = [];	                          
+var fixed_nodes =  [];	var areas    = []; 	
+var free_nodes  =  [];	var lengths  = [];	
+var node_force  =  [];	var compliance_gradient = [];
+
+var areas_save      = [];
+var compliance_save;
+
+var E;            		var area_min; 	var volume;  	
+var compliance; 		var area_max; 	var max_volume; 		
+	
+var k_global;			var k_reduced;                              
+var u_global;			var u_reduced;  
+var f_global;			var f_reduced;
+
+var iteration_count = 0;
+
+/*------------------------------ Main () ----------------------------------*/
+clear_data();	
+key_new();
+print(starter_print);
+
+/* ------------------ High-Level Finite Element Functions -----------------*/
+function solve() {
+	find_free_nodes();	find_lengths(); 	find_volume();
+	find_k_global();	find_k_reduced();
+	find_f_global();	find_f_reduced();
+	find_u_reduced();	find_u_global();	
+	find_compliance();  print_data();}
+
+function optimize(iter=1000, step=.02) {
+	iteration_count = 1;	
+	for (let i = 1; i < iter + 1; i++) {
+		setTimeout(function () {
+			solve();
+			find_compliance_gradient();
+ 			areas_minus_gradient(step);
+ 			scale_areas_to_maxvol();
+  			draw();		iteration_count++;}, 1);}}
+
+function find_compliance_gradient(dA=.001) {
+	areas_save      = areas;
+	compliance_save = compliance;
+
+	compliance_gradient     = [];
+	for (let el = 0; el < elements.length; el++) {
+		areas = areas_save;	
+		areas[el] += dA;	 
+		
+		find_k_global();	find_k_reduced();
+		find_u_reduced();	find_u_global();	
+		find_compliance(); 
+
+		let dC = compliance-compliance_save;	
+		compliance_gradient.push(dC/dA); }
+	
+	areas      = areas_save;
+	compliance = compliance_save; }
+
+function areas_minus_gradient(step=.01) {
+	for (let a = 0; a < areas.length; a++) {
+		areas[a] = areas[a] - step*compliance_gradient[a];
+		if (areas[a] < area_min) { areas[a] = area_min; }
+		if (areas[a] > area_max) { areas[a] = area_max; }}}
+
+/*-------------- Low-Level Finite-Element Functions -----------------------*/
+function clear_data() {
+	iteration_count = 0;
+	u_reduced  = null;  u_global = null; nodes       = [];	elements   = [];    
+	k_reduced  = null;	k_global = null; fixed_nodes = [];  areas      = [];  
+	f_reduced  = null;	f_global = null; free_nodes  = []; 	node_force = [];
+	compliance = null;	compliance_gradient = [];}
+
+function find_k_global() {
+	k_global = new Sushi.Matrix(2*nodes.length, 2*nodes.length);
+	for (let el = 0; el < elements.length; el++) {
+		let k_el = new Sushi.Matrix(2*nodes.length, 2*nodes.length);
+		
+		let n0  = elements[el][0]-1;	let n1  = elements[el][1]-1;
+		let n0x = nodes[n0][0];			var n1x = nodes[n1][0];
+		let n0y = nodes[n0][1];			var n1y = nodes[n1][1];
+		let dx  = (n1x - n0x);			let dy  = (n1y - n0y);		
+		let A   = areas[el];			let L   = Math.sqrt(dx*dx + dy*dy);
+		let c   = dx/L;					let s   = dy/L;
+		
+		k_el.set(2*n0, 2*n0  ,  c*c*E*A/L);	k_el.set(2*n0+1, 2*n0  ,  c*s*E*A/L);
+		k_el.set(2*n0, 2*n0+1,  c*s*E*A/L); k_el.set(2*n0+1, 2*n0+1,  s*s*E*A/L);	
+		k_el.set(2*n0, 2*n1  , -c*c*E*A/L);	k_el.set(2*n0+1, 2*n1  , -c*s*E*A/L);
+		k_el.set(2*n0, 2*n1+1, -c*s*E*A/L);	k_el.set(2*n0+1, 2*n1+1, -s*s*E*A/L);	
+		k_el.set(2*n1, 2*n0  , -c*c*E*A/L);	k_el.set(2*n1+1, 2*n0  , -c*s*E*A/L);
+		k_el.set(2*n1, 2*n0+1, -c*s*E*A/L);	k_el.set(2*n1+1, 2*n0+1, -s*s*E*A/L);	
+		k_el.set(2*n1, 2*n1,    c*c*E*A/L);	k_el.set(2*n1+1, 2*n1  ,  c*s*E*A/L);
+		k_el.set(2*n1, 2*n1+1,  c*s*E*A/L);	k_el.set(2*n1+1, 2*n1+1,  s*s*E*A/L);
+		k_global.add(k_el);}}
+
+function find_k_reduced() {
+	k_reduced = new Sushi.Matrix(2*free_nodes.length, 2*free_nodes.length);	
+	for (var i = 0; i < free_nodes.length; i++) {
+		for (var j = 0; j < free_nodes.length; j++) {
+			let ni = free_nodes[i] - 1;
+			let nj = free_nodes[j] - 1;
+			k_reduced.set(2*i  , 2*j  , k_global.get(2*ni  , 2*nj));
+			k_reduced.set(2*i+1, 2*j  , k_global.get(2*ni+1, 2*nj));
+			k_reduced.set(2*i  , 2*j+1, k_global.get(2*ni  , 2*nj+1));
+			k_reduced.set(2*i+1, 2*j+1, k_global.get(2*ni+1, 2*nj+1));}}}
+
+function find_free_nodes() {
+	free_nodes = [];
+	for (let n = 1; n < nodes.length+1; n++) {free_nodes.push(n);}
+	for (let i = 0; i < fixed_nodes.length; i++){
+		let fn = fixed_nodes[i];
+		free_nodes = free_nodes.filter(n => n != fn);}}
+
+function find_f_global() {
+	f_global = new Sushi.Matrix(2*nodes.length, 1); 
+	f_global.set(2*(node_force[0]-1)  , 0, node_force[1]);
+	f_global.set(2*(node_force[0]-1)+1, 0, node_force[2]);}
+
+function find_f_reduced() {
+	f_reduced = new Sushi.Matrix( 2*free_nodes.length, 1);
+	for	(let n = 0; n < Math.max( 0,free_nodes.length); n++) {
+		let N = free_nodes[n]-1;	
+		f_reduced.set(2*n,   0, f_global.get(2*N,   0));
+		f_reduced.set(2*n+1, 0, f_global.get(2*N+1, 0));}}
+
+function find_u_reduced() {
+	let k_inverse = k_reduced.inverse();
+	u_reduced = new Sushi.Matrix.mul(k_inverse, f_reduced);}
+
+function find_u_global() {
+	u_global = new Sushi.Matrix(2*nodes.length, 1);
+	for (let n = 0; n< free_nodes.length; n++) {
+		let N = free_nodes[n] - 1;
+		u_global.set(2*N,   0, u_reduced.get(2*n,   0));
+		u_global.set(2*N+1, 0, u_reduced.get(2*n+1, 0));}}
+
+function find_compliance() {
+	let f_reduced_t = f_reduced.t();
+	let c = new Sushi.Matrix.mul(f_reduced_t, u_reduced);
+    compliance = c.get(0, 0);}
+
+function find_lengths() {
+	if (elements.length > 0) {
+		lengths = [];
+		for (var el = 0; el < elements.length; el++) {
+			let n0  = elements[el][0]-1;		let n1 = elements[el][1]-1;
+			let dx  = nodes[n1][0]-nodes[n0][0];let dy = nodes[n1][1]-nodes[n0][1];
+			let len = Math.sqrt(dx*dx + dy*dy);
+			lengths.push(len); }}}
+
+function find_volume() {
+	volume = 0;
+	if (areas.length > 0) {
+		for (let el = 0; el < elements.length; el++) {
+			volume += areas[el]*lengths[el];}}}
+
+function scale_areas_to_maxvol() {
+	find_volume();
+	for (let el = 0; el < areas.length; el++) {
+		areas[el] = areas[el]*max_volume/volume; }}
+
+/* ------------------------- Print Functions -----------------------*/
+function print(data) { printout.innerHTML = data; }
+function print_array( data, decimals=2){ print(array_to_string(data, decimals));}
+function print_matrix(data, decimals=2){ print(sushi_string(data, decimals));}
+
+function array_to_string(array, decimals=2) {
+	let s = '[' + array[0].toFixed(decimals);
+	for (let i = 1; i < array.length; i++) {
+	    s += ','+ array[i].toFixed(decimals);}
+		s += ']'; return s;}
+
+function sushi_string(matrix, decimals=2) {
+	let string = '[';
+	for (let i = 0; i < Math.max(0, matrix.rows); i++) {
+		if (i != 0) {string += ', ';}
+		let u = matrix.get(i,0);
+		u = u.toFixed(decimals);
+        string += u;}
+	string += ']';
+	return string;}
+
+function print_data() {
+	let space = '&#160'.repeat(6);	let string = '';
+	if (nodes.length > 0)    { string += 'total nodes: '+ nodes.length +space;}
+	if (elements.length > 0) { string += 'total elements: '+elements.length+space;}
+	if (E > 0)               { string += 'E: '+E+'<br/>';}
+	if (fixed_nodes.length>0){ string += 'fixed nodes:'+fixed_nodes+'<br/>';}
+	if (volume > 0)          { string += 'volume: '+volume.toFixed(3)+'<br/>';}	
+	if (areas.length > 0)    { string += 'areas:' + array_to_string(areas)+'<br/>';}
+	if (iteration_count!=0)  { string += 'iterations: '+iteration_count +'<br/>';}
+	if (compliance   > 0)    { string +='compliance:'+compliance.toFixed(5)+'<br/>';}
+	if (compliance_gradient.length > 0) { 
+							   string += 'compliance_gradient: ';
+							   string += array_to_string(compliance_gradient);
+							   string += '<br/>';}
+
+	if (node_force.length>0) { string += 'force (node ' + node_force[0];
+							   string += ') [fx,fy] = ['+ node_force[1];
+							   string += ',' + node_force[2]+'] <br/>';}
+	
+	if (u_global != null)    { string+='u_global:'+sushi_string(u_global)+'<br/>';}
+	
+	printout.innerHTML = string;}
+
+/*--------------------- High-Level Drawing Functions ----------------*/
+function draw() {
+	clear_canvas(); 	set_axis_auto();		draw_axis();   
+	draw_elements();	draw_u(); 				draw_forces();
+	draw_fixed();		draw_element_labels();	draw_node_labels();}
+
+/*-------------------- Mid-Level Drawing Functions ------------------*/
+function draw_element_labels() {
+	if (elements.length > 0) {
+		axis.textAlign    = 'center'; 	axis.font = '20px sans serif';				
+		axis.textBaseline = 'middle';	axis.fillStyle = el_label_color;
+		for (var el = 0; el < elements.length; el++) {
+			let n0  = elements[el][0];	let n1  = elements[el][1];
+			let n0x = nodes[n0-1][0];	let n1x = nodes[n1-1][0];
+			let n0y = nodes[n0-1][1];	let n1y = nodes[n1-1][1];	
+			text((n0x + n1x)/2, (n0y + n1y)/2, el+1);}}}
+
+function draw_node_labels() {
+	if (nodes.length > 0) {
+		axis.textAlign    = 'center'; 	axis.font = '16px sans serif';				
+		axis.textBaseline = 'middle';	axis.fillStyle = node_label_color;
+		for (var n = 0; n < nodes.length; n++) {
+			text(nodes[n][0], nodes[n][1], n+1);}}}
+
+function draw_elements() {
+	if (areas.length < 1) { areas = new Array(100).fill(1);}
+	if (elements.length > 0 && nodes.length > 0) {
+		let area_max_draw = 0;
+		for (let el = 0; el < elements.length; el++) {
+			if (areas[el] > area_max_draw) { area_max_draw = areas[el]; }}
+
+		axis.strokeStyle = element_color;
+		for (let el = 0; el < elements.length; el++) {
+			let n0  = elements[el][0];	let n1  = elements[el][1];
+			let n0x = nodes[n0-1][0];	let n1x = nodes[n1-1][0];
+			let n0y = nodes[n0-1][1];	let n1y = nodes[n1-1][1];
+			axis.lineWidth = 12*areas[el]/area_max_draw;
+			line(n0x, n0y, n1x, n1y);}}}
+
+function draw_forces() {
+	if (node_force.length > 0) {
+		let f_node = node_force[0] - 1;
+		let nx = nodes[f_node][0];  let fx = node_force[1];
+		let ny = nodes[f_node][1];  let fy = node_force[2];
+		let len = Math.sqrt(fx*fx + fy*fy)/axRad*5;
+		axis.strokeStyle = force_color; 
+		axis.lineWidth   = 3;
+		arrow(nx, ny, nx + fx/len, ny + fy/len);}}
+
+function draw_fixed() {
+	if (fixed_nodes.length > 0) {
+		axis.fillStyle = fixed_color;
+		for (let fp = 0; fp < fixed_nodes.length; fp++) {	
+			let node = fixed_nodes[fp]-1;
+			let nx   = nodes[node][0];
+			let ny   = nodes[node][1];
+			point(nx, ny);}}}
+
+function draw_u() {
+	if (u_global != null) {
+		axis.strokeStyle = u_color; 	axis.lineWidth = 2;
+		for (var el = 0; el < elements.length; el++) {
+			let n0  = elements[el][0]-1;		let n1  = elements[el][1]-1;
+			let n0x = nodes[n0][0];				let n1x = nodes[n1][0];
+			let n0y = nodes[n0][1];				let n1y = nodes[n1][1];
+			let u0x = u_global.get(2*n0, 0);	let u0y = u_global.get(2*n0+1, 0);
+			let u1x = u_global.get(2*n1, 0);	let u1y = u_global.get(2*n1+1, 0);
+			line(n0x + u0x, n0y + u0y, n1x + u1x, n1y + u1y);}}}
+
+function set_axis(xlow, xhigh, ylow, yhigh) {
+	axMid = (xhigh + xlow)/2;	ayMid = (yhigh + ylow)/2;
+	axRad = (xhigh - xlow)/2;	ayRad = (yhigh - ylow)/2;}
+
+function set_axis_auto() {
+	let xmin = 100000; let xmax = -100000;
+	let ymin = 100000; let ymax = -100000;
+	for (let n = 0; n < nodes.length; n++) {
+		let nx = nodes[n][0];
+		let ny = nodes[n][1];
+		if (nx < xmin) {xmin = nx;}
+		if (ny < ymin) {ymin = ny;}
+		if (nx > xmax) {xmax = nx;}
+		if (ny > ymax) {ymax = ny;}}
+
+	axMid = Math.floor((xmax + xmin)/2 + .5); axRad = Math.floor(xmax-xmin)/1.5+1; 
+	ayMid = Math.floor((ymax + ymin)/2 + .5); ayRad = Math.floor(ymax-ymin)/1.5+1;}
+
+function draw_axis() {
+	axis.strokeStyle = grid_color; 		axis.lineWidth = .3;		
+	axis.fillStyle   = grid_text_color; axis.textAlign = 'right'; 					
+	axis.font = '12px sans serif';		axis.textBaseline = 'middle';
+	
+	let xLow  = Math.floor(axMid - axRad); 	let xHigh = Math.ceil(axMid + axRad);
+	let yLow  = Math.floor(ayMid - ayRad); 	let yHigh = Math.ceil(ayMid + ayRad);
+	let dx = 1; if (axRad > 5) { dx = Math.floor(axRad/5); }
+	let dy = 1; if (ayRad > 5) { dy = Math.floor(ayRad/5); }
+	
+	for (let x = axMid;    x < xHigh; x+=dx) {line(x,yLow,x,yHigh); text(x, 0, x);}
+	for (let x = axMid-dx; x > xLow;  x-=dx) {line(x,yLow,x,yHigh); text(x, 0, x);}
+	for (let y = ayMid;    y < yHigh; y+=dy) {line(xLow,y,xHigh,y); text(0, y, y);}
+	for (let y = ayMid-dy; y > yLow;  y-=dy) {line(xLow,y,xHigh,y); text(0, y, y);}
+
+	axis.lineWidth = 1;
+	line(xLow, 0, xHigh, 0);
+	line(0, yLow, 0, yHigh);}
+
+/*------------------------- Low-level Drawing Functions -----------------*/
+function clear_canvas() { axis.clearRect(0, 0, 2*cxRad, 2*cyRad);}
+
+function line(x0, y0, x1, y1) {
+	let cx0 =   (x0 - axMid)/axRad*cxRad + cxRad;
+	let cy0 =  -(y0 - ayMid)/ayRad*cyRad + cyRad;
+	let cx1 =   (x1 - axMid)/axRad*cxRad + cxRad;
+	let cy1 =  -(y1 - ayMid)/ayRad*cyRad + cyRad;
+
+	axis.beginPath(); 		axis.moveTo(cx0, cy0);  
+	axis.lineTo(cx1, cy1); 	axis.stroke();}
+
+function arrow(x0, y0, x1, y1) {
+	let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
+	let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
+	let cx1 =  (x1 - axMid)/axRad*cxRad + cxRad;
+	let cy1 = -(y1 - ayMid)/ayRad*cyRad + cyRad;
+
+	let dx   = (cx1 - cx0);     			let dy   = (cy1 - cy0);	
+	let len  = Math.sqrt(dx*dx + dy*dy);	let w    = len/7;
+	let cos0 = dx/len;						let sin0 = dy/len;		
+	let ax1  = cx1-w*sin0-dx/7;  			let ay1  = cy1+w*cos0-dy/7;
+	let ax2  = cx1+w*sin0-dx/7;  			let ay2  = cy1-w*cos0-dy/7;
+
+	axis.beginPath(); axis.moveTo(cx0, cy0); axis.lineTo(cx1, cy1);	axis.stroke();
+	axis.beginPath(); axis.moveTo(cx1, cy1); axis.lineTo(ax1, ay1);	axis.stroke();
+	axis.beginPath(); axis.moveTo(cx1, cy1); axis.lineTo(ax2, ay2);	axis.stroke();}
+
+function point(x0, y0) {
+	let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
+	let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
+	axis.fillRect(cx0 - 10, cy0 - 10, 20, 20);}
+
+function text(x, y, text) {
+	let cx0 =  (x - axMid)/axRad*cxRad + cxRad;
+	let cy0 = -(y - ayMid)/ayRad*cyRad + cyRad;
+	axis.fillText(text, cx0, cy0);}
+
+</script> </body> </html>
