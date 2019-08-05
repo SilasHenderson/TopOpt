@@ -18,12 +18,12 @@ document.body.style.backgroundColor = '#222222';
 
 var canvas = document.getElementById('canvas');
 	var lims  = canvas.getBoundingClientRect();
-	var cxMid = lims.x + lims.width/2;		var cxRad = lims.width/2;  
+	var cxMid = lims.x + lims.width/2;	var cxRad = lims.width/2;  
 	var cyMid = lims.y + lims.height/2;    	var cyRad = lims.height/2; 
-	canvas.width = 2*cxRad;					canvas.height = 2*cyRad;
+	canvas.width = 2*cxRad;			canvas.height = 2*cyRad;
 
 var axis = canvas.getContext("2d");		var axMid =  0; var ayMid = 0;
-	axis.imageSmoothingEnabled = false; var axRad =  7; var ayRad = 10; 
+	axis.imageSmoothingEnabled = false; 	var axRad =  7; var ayRad = 10; 
 
 /*--------------------------- Setup --------------------------------------*/
 var nelx = 10; 	var nu =  .3;  	var vol_frac = .3;	
@@ -40,10 +40,10 @@ set_axis(-1, nelx+1, -1, nely+1);
 
 function opt() {
 	find_dof_free();	find_el_nodes_dof();	find_node_coords();
-	find_k0_el();		initialize_x();			find_f_global_reduced();
+	find_k0_el();		initialize_x();		find_f_global_reduced();
 	for (let i = 0; i < 50; i++) { setTimeout(
-		function () { clear_canvas(); solve(); 
-					  oc_update(); 	  draw_elements();}, 1);}}
+		function () { 	clear_canvas(); 	solve(); 
+				oc_update(); 	  	draw_elements();}, 1);}}
 
 /*------------------------------ FEA Functions ---------------------------*/
 function find_k0_el() {     
@@ -96,7 +96,7 @@ function solve() {
         dc.push(-p*Math.pow(x.get(el,0),p-1)*uku);}}
 
 function oc_update() {
-    let lambda_min = 0;   		let move  = 0.2; 
+    let lambda_min = 0;   	let move  = 0.2; 
     let lambda_max = 100000; 	let x_new = new Sushi.Matrix(nelx*nely,1); 
 
     while ((lambda_max-lambda_min) > .0001) {
@@ -133,11 +133,11 @@ function find_el_nodes_dof() {
 	for (let ex = 0; ex < nelx; ex++) {
 		for (let ey = 0; ey < nely; ey++) {
 			let upleft  = (nely+1)*(ex)+ey+1; let upright  = (nely+1)*(ex+1)+ey+1;
-        	let lowleft = (nely+1)*(ex)+ey;   let lowright = (nely+1)*(ex+1)+ey;   
+        		let lowleft = (nely+1)*(ex)+ey;   let lowright = (nely+1)*(ex+1)+ey;   
         	
-        	el_nodes[el_count] = [lowleft, lowright, upright, upleft];
-        	el_dof[el_count]   = [2*lowleft, 2*lowleft+1, 2*lowright, 2*lowright+1,
-            	                  2*upright, 2*upright+1, 2*upleft  , 2*upleft+1];
+        		el_nodes[el_count] = [	lowleft, lowright, upright, upleft];
+        		el_dof[el_count]   = [	2*lowleft, 2*lowleft+1, 2*lowright, 2*lowright+1,
+            	                  		2*upright, 2*upright+1, 2*upleft  , 2*upleft+1];
         	el_count++;}}}
 
 function find_dof_free() {
