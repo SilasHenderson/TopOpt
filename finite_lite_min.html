@@ -34,14 +34,14 @@ var printout = document.getElementById('printout');
 var paper    = document.getElementById('paper');
 var canvas   = document.getElementById('canvas');
 	var lims   = canvas.getBoundingClientRect();
-	var cxMid  = lims.x + lims.width/2;		var cxRad = lims.width/2;  
+	var cxMid  = lims.x + lims.width/2;	var cxRad = lims.width/2;  
 	var cyMid  = lims.y + lims.height/2;    var cyRad = lims.height/2; 
 	var aspect = cxRad/cyRad;
 	canvas.width  = 2*cxRad;
 	canvas.height = 2*cyRad;
 
 var axis = canvas.getContext("2d");			
-	var axMid =  0; 				var ayMid = 0;
+	var axMid =  0; 			var ayMid = 0;
 	var axRad = 10*aspect; 			var ayRad = 10; 
 	axis.imageSmoothingEnabled = false;
 
@@ -133,7 +133,7 @@ function solve() {
 	find_k_global();	find_k_reduced();
 	find_f_global();	find_f_reduced();
 	find_u_reduced();	find_u_global();	
-	find_compliance();  print_data();}
+	find_compliance();  	print_data();}
 
 function optimize(iter=1000, step=.02) {
 	iteration_count = 1;	
@@ -173,8 +173,8 @@ function areas_minus_gradient(step=.01) {
 /*-------------- Low-Level Finite-Element Functions -----------------------*/
 function clear_data() {
 	iteration_count = 0;
-	u_reduced  = null;  u_global = null; nodes       = [];	elements   = [];    
-	k_reduced  = null;	k_global = null; fixed_nodes = [];  areas      = [];  
+	u_reduced  = null;  	u_global = null; nodes       = [];	elements   = [];    
+	k_reduced  = null;	k_global = null; fixed_nodes = [];  	areas      = [];  
 	f_reduced  = null;	f_global = null; free_nodes  = []; 	node_force = [];
 	compliance = null;	compliance_gradient = [];}
 
@@ -184,10 +184,10 @@ function find_k_global() {
 		let k_el = new Sushi.Matrix(2*nodes.length, 2*nodes.length);
 		
 		let n0  = elements[el][0]-1;	let n1  = elements[el][1]-1;
-		let n0x = nodes[n0][0];			var n1x = nodes[n1][0];
-		let n0y = nodes[n0][1];			var n1y = nodes[n1][1];
-		let dx  = (n1x - n0x);			let dy  = (n1y - n0y);		
-		let A   = areas[el];			let L   = Math.sqrt(dx*dx + dy*dy);
+		let n0x = nodes[n0][0];		var n1x = nodes[n1][0];
+		let n0y = nodes[n0][1];		var n1y = nodes[n1][1];
+		let dx  = (n1x - n0x);		let dy  = (n1y - n0y);		
+		let A   = areas[el];		let L   = Math.sqrt(dx*dx + dy*dy);
 		let c   = dx/L;					let s   = dy/L;
 		
 		k_el.set(2*n0, 2*n0  ,  c*c*E*A/L);	k_el.set(2*n0+1, 2*n0  ,  c*s*E*A/L);
@@ -225,7 +225,7 @@ function find_f_global() {
 
 function find_f_reduced() {
 	f_reduced = new Sushi.Matrix( 2*free_nodes.length, 1);
-	for	(let n = 0; n < Math.max( 0,free_nodes.length); n++) {
+	for (let n = 0; n < Math.max( 0,free_nodes.length); n++) {
 		let N = free_nodes[n]-1;	
 		f_reduced.set(2*n,   0, f_global.get(2*N,   0));
 		f_reduced.set(2*n+1, 0, f_global.get(2*N+1, 0));}}
@@ -244,7 +244,7 @@ function find_u_global() {
 function find_compliance() {
 	let f_reduced_t = f_reduced.t();
 	let c = new Sushi.Matrix.mul(f_reduced_t, u_reduced);
-    compliance = c.get(0, 0);}
+    	compliance = c.get(0, 0);}
 
 function find_lengths() {
 	if (elements.length > 0) {
@@ -298,13 +298,14 @@ function print_data() {
 	if (iteration_count!=0)  { string += 'iterations: '+iteration_count +'<br/>';}
 	if (compliance   > 0)    { string +='compliance:'+compliance.toFixed(5)+'<br/>';}
 	if (compliance_gradient.length > 0) { 
-							   string += 'compliance_gradient: ';
-							   string += array_to_string(compliance_gradient);
-							   string += '<br/>';}
+		string += 'compliance_gradient: ';
+		string += array_to_string(compliance_gradient);
+		string += '<br/>';}
 
-	if (node_force.length>0) { string += 'force (node ' + node_force[0];
-							   string += ') [fx,fy] = ['+ node_force[1];
-							   string += ',' + node_force[2]+'] <br/>';}
+	if (node_force.length>0) { 
+		string += 'force (node ' + node_force[0];
+		string += ') [fx,fy] = ['+ node_force[1];
+		string += ',' + node_force[2]+'] <br/>';}
 	
 	if (u_global != null)    { string+='u_global:'+sushi_string(u_global)+'<br/>';}
 	
@@ -313,8 +314,8 @@ function print_data() {
 /*--------------------- High-Level Drawing Functions ----------------*/
 function draw() {
 	clear_canvas(); 	set_axis_auto();		draw_axis();   
-	draw_elements();	draw_u(); 				draw_forces();
-	draw_fixed();		draw_element_labels();	draw_node_labels();}
+	draw_elements();	draw_u(); 			draw_forces();
+	draw_fixed();		draw_element_labels();		draw_node_labels();}
 
 /*-------------------- Mid-Level Drawing Functions ------------------*/
 function draw_element_labels() {
@@ -373,8 +374,8 @@ function draw_u() {
 		axis.strokeStyle = u_color; 	axis.lineWidth = 2;
 		for (var el = 0; el < elements.length; el++) {
 			let n0  = elements[el][0]-1;		let n1  = elements[el][1]-1;
-			let n0x = nodes[n0][0];				let n1x = nodes[n1][0];
-			let n0y = nodes[n0][1];				let n1y = nodes[n1][1];
+			let n0x = nodes[n0][0];			let n1x = nodes[n1][0];
+			let n0y = nodes[n0][1];			let n1y = nodes[n1][1];
 			let u0x = u_global.get(2*n0, 0);	let u0y = u_global.get(2*n0+1, 0);
 			let u1x = u_global.get(2*n1, 0);	let u1y = u_global.get(2*n1+1, 0);
 			line(n0x + u0x, n0y + u0y, n1x + u1x, n1y + u1y);}}}
@@ -399,7 +400,7 @@ function set_axis_auto() {
 
 function draw_axis() {
 	axis.strokeStyle = grid_color; 		axis.lineWidth = .3;		
-	axis.fillStyle   = grid_text_color; axis.textAlign = 'right'; 					
+	axis.fillStyle   = grid_text_color; 	axis.textAlign = 'right'; 					
 	axis.font = '12px sans serif';		axis.textBaseline = 'middle';
 	
 	let xLow  = Math.floor(axMid - axRad); 	let xHigh = Math.ceil(axMid + axRad);
@@ -435,8 +436,8 @@ function arrow(x0, y0, x1, y1) {
 	let cy1 = -(y1 - ayMid)/ayRad*cyRad + cyRad;
 
 	let dx   = (cx1 - cx0);     			let dy   = (cy1 - cy0);	
-	let len  = Math.sqrt(dx*dx + dy*dy);	let w    = len/7;
-	let cos0 = dx/len;						let sin0 = dy/len;		
+	let len  = Math.sqrt(dx*dx + dy*dy);		let w    = len/7;
+	let cos0 = dx/len;			      	let sin0 = dy/len;		
 	let ax1  = cx1-w*sin0-dx/7;  			let ay1  = cy1+w*cos0-dy/7;
 	let ax2  = cx1+w*sin0-dx/7;  			let ay2  = cy1-w*cos0-dy/7;
 
