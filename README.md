@@ -10,23 +10,23 @@ Topology Optimization with JavaScript
 
 *About*
 
-This is a JavaScript interpretation of Ole Sigmund's '99-Line' top.m Matlab code.  It was a good opportunity to learn about JavaScripts numerical strengths and weaknesses.  JavaScript is awesome.  However, high-speed numerical libraries, at the level of numpy don't exist yet for javascript.  This is because javascript also needs to be safe and run in the browser.  I'd guess that a high-speed linear-algebra will definitely arrive within the next five years.  
+This is a JavaScript interpretation of Ole Sigmund's '99-Line' top.m Matlab code. It runs OC Method optimization on a mesh of Q4 elements.
 
-to be very fast, except for matrix math.
+The challenge *right now* for this project is to find a faster solver for ku = f.  Numberical computing in javascript is still new. a. High-speed numerical libraries like `numpy` don't exist yet for javascript.  This is because javascript needs to run *safely in the browser*.  The native computer's full power isn't used, because javascript is sand-boxed within the browser.  However, there are already **three *safe* ways** of getting the local system to contribute more to the computation effort. These are
 
-Right now, the bottleneck is solving linear systems with (1000+) equations.
+* `WASM`: (a new Low-Level Virtual Machine)
+* `WebGL` (Use the GPU for math)
+* `Web-Workers` ( Use more Threads )
 
-This is a work in progress.  
-The bottleneck is the *time spent solving ku = f*.  Some potential options for faster matrix-math are:
-
+Additional possibilities for speeding up this 
 * Write a more efficient sparse-solver
 * distribute computation in web-workers
 * Use approximation methods for ku = f
-* parallelize solving ku = f using GLSL
-* write ku = f solver with WebGL2's new Compute Shader
-* compile ku = f solver with wasm
-* write a node-OpenCL version of solver
-* wait for tensorflow.js to add lin-solve
+* parallelize solving ku = f using `GLSL`
+* write ku = f solver with WebGL2's new `Compute Shader`
+* compile ku = f solver with `wasm`
+* write a `node-OpenCL` version of solver
+* wait for `tensorflow.js` to add lin-solve
 
 *To Do*
 * add support for compliant mechanisms
@@ -51,6 +51,3 @@ Truss Optimization Gui with JavaScript.  `Sushi.js` Used for Matrix Operations.
 * Add More Examples
 * Fix Finite_gui.html
 * Write script for 3d truss
-
-
-
