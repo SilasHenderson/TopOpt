@@ -2,15 +2,22 @@
 
 Topology Optimization with JavaScript
 
-#### Q4 OC Method (Based on Sigmund 99-line)
-* `top_0.html`: initial topopt script *(needs sushi)*
-* `top_1.html`: added windowing *(needs sushi)*
-* `top_2.html`: wrote in custom ku=f solver *(no sushi)*
+### top.html
+* `top_0.html`: minimal demo
+* `top_1.html`: working version
+* `top_2.html`: faster version
 * `sushi.js`: *External Matrix Library*
 
 *About*
 
-This is a work-in-progress.  Right now, the program can only handle 20x20 meshes before getting slow.  The bottleneck is solving ku = f.  A 20x20 mesh means 21*21 = 441 nodes = 882 dof's = (882-fixed) linear equations to solve.  Some possible fixes are:
+This is a JavaScript interpretation of Ole Sigmund's '99-Line' top.m Matlab code.  It was a good opportunity to learn about JavaScripts numerical strengths and weaknesses.  JavaScript is awesome.  However, high-speed numerical libraries, at the level of numpy don't exist yet for javascript.  This is because javascript also needs to be safe and run in the browser.  I'd guess that a high-speed linear-algebra will definitely arrive within the next five years.  
+
+to be very fast, except for matrix math.
+
+Right now, the bottleneck is solving linear systems with (1000+) equations.
+
+This is a work in progress.  
+The bottleneck is the *time spent solving ku = f*.  Some potential options for faster matrix-math are:
 
 * Write a more efficient sparse-solver
 * distribute computation in web-workers
@@ -20,8 +27,6 @@ This is a work-in-progress.  Right now, the program can only handle 20x20 meshes
 * compile ku = f solver with wasm
 * write a node-OpenCL version of solver
 * wait for tensorflow.js to add lin-solve
-
-All of this fixes are pretty difficult.  If anyone is aware of a GPU-accelerated linear system solver (not just mult and add), please let me know.  Also, sushi.js is awesome for matrices < [500x500].  However, it doesn't have a linear-solver.  Only a matrix inverter (too expensive).  The linear solver in version top_2 used same approach as sushi: work with 1d Float32Arrays, but saves on cost because it just solves (not invert) the matrix.
 
 *To Do*
 * add support for compliant mechanisms
