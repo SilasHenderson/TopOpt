@@ -1,0 +1,330 @@
+<!-- top.html - - - - - - Document Layout (HTML, CSS) - - - - - - - - - -->
+<!DOCTYPE html> <html> <head> <style> 
+	body {  background-color:#333333;}
+	.key {  top:0%;         height:5%;      color:#bbbbbb;   
+          	width:5%;   	position:fixed;	background-color:#333333;
+        	border:none;	font-size:16px; }
+	.key:hover { background-color: #334433; }
+	.key:active{ background-color: #333344; } </style> </head> <body> 
+
+<button class="key" onmousedown="key_run()"  style="left:0%;">   Run  </button>
+<button class="key" onmousedown="key_save()" style="left:5%;">   Save </button>
+<button class="key" onmousedown="key_open()" style="left:10%;"> Open </button>
+<button class="key" onmousedown="key_new()"  style="left:15%;">  New  </button>
+<button class="key" onmousedown="key_info()" style="left:20%">  Info </button>
+
+<textarea id='paper' spellcheck = 'false'
+    style="top:5%;      height:95%;     position:fixed; background-color:#dde3ee;
+           left:0%;     width:50%;    	font-size:16px;	color:#000000;
+           border:none; outline:none;   padding:0;      resize:none;"> 
+</textarea>
+
+<canvas id='canvas'
+    style="top:5%;       height:60%;    background-color:#d7d9d8;
+           left:50%;     width:50%;     position:fixed;"> </canvas>
+
+<div id='printout' 
+    style="top:66%;      height:38%;    background-color:#eaeaea;
+           left:50%;     width:50%;     color:#000000; 
+           font-size:16px; position:fixed;"> </div> <script> 
+
+/*--------------------- Document Layout (Javascript) --------------------*/
+var printout   = document.getElementById('printout');
+var paper      = document.getElementById('paper');
+var canvas     = document.getElementById('canvas');
+	var lims   = canvas.getBoundingClientRect();
+	var cxMid  = lims.x + lims.width/2;		var cxRad = lims.width/2;  
+	var cyMid  = lims.y + lims.height/2;    var cyRad = lims.height/2; 
+	var aspect = cxRad/cyRad;
+	canvas.width  = 2*cxRad;
+	canvas.height = 2*cyRad;
+
+var axis = canvas.getContext("2d");			
+	var axMid =  0; 				var ayMid = 0;
+	var axRad = 10*aspect; 			var ayRad = 10; 
+	axis.imageSmoothingEnabled = false;
+
+/*--------------------------- Global Variables --------------------------*/
+var vol_frac;	var node_coords; 
+var nelx;		var el_nodes;		var dof_fixed;   		
+var nely;   	var el_dof;   		var dof_free;	  
+var c;			var dc;				var x;
+
+var k_global;	var u_global;		var f_global;	
+var k_reduced;	
+var A_;			var b_; 
+
+/*------------------------------- On Start -----------------------------*/
+key_new();
+
+/*----------------------------- Gui Functions ----------------------------*/
+function key_run(){ eval(paper.value); }                 	
+function key_save() { localStorage.script = paper.value;			  
+	 	print('--script saved to local browser storage --');}
+function key_open() { paper.value = localStorage.script;
+		print('--script retrieved from local browser storage');}	         
+function key_new()  { load_default();}
+function key_info() {}
+
+/*-------------------------- High-Level FEA Functions ---------------------*/
+function build() {
+	find_x0();			find_node_coords();
+	find_el_nodes();	find_el_dof();
+	find_dof_free();	find_k0_el();		
+	load_buffers();}
+
+function opt(max_iter = 20) {
+	let iter = 0;
+	loop();
+	function loop() {
+  		find_k();  		solve_kuf();   	find_compliance(); 
+  		oc_update();  	clear_canvas(); draw_elements();
+    	iter++;  		print('iter: ' + iter);
+    	if (iter < max_iter) {
+    		requestAnimationFrame(loop);}}}
+
+/*------------------------ Low-Level FEA Functions ----------------------*/
+function find_x0() {
+	x = []; 
+	for (let i = 0; i < nelx*nely; i++) { 
+		x.push(vol_frac);}
+	x = new Float32Array(x);}
+
+function find_node_coords() {
+	node_coords = [];								
+	for (let nx = 0; nx < nelx+1; nx++) {
+ 		for (let ny = 0; ny < nely+1; ny++) {
+        	node_coords.push(nx);
+        	node_coords.push(ny);}}
+    node_coords = new Float32Array(node_coords);}
+
+function find_el_nodes() {
+	el_nodes = [];
+	for (let ex = 0; ex < nelx; ex++) {
+		for (let ey = 0; ey < nely; ey++) {
+			el_nodes.push((nely+1)*(ex)+ey); 
+			el_nodes.push((nely+1)*(ex+1)+ey); 
+			el_nodes.push((nely+1)*(ex+1)+ey+1);
+			el_nodes.push((nely+1)*(ex)+ey+1);}}
+	el_nodes = new Float32Array(el_nodes);}
+
+function find_el_dof() {
+	el_dof = [];
+	for (let i = 0; i < el_nodes.length; i++) {
+		el_dof.push(2*el_nodes[i]    );
+		el_dof.push(2*el_nodes[i] + 1);}
+	el_dof = new Float32Array(el_dof);}
+
+function find_dof_free() {
+	dof_free = []; 												
+	for (let i = 0; i < 2*(nelx+1)*(nely+1); i++) {				
+		let found = 0;
+		for (let j = 0; j < dof_fixed.length; j++) {
+			if (i == dof_fixed[j]) {found = 1;}}
+		if (found == 0) { 
+			dof_free.push(i);}}
+	dof_free = new Float32Array(dof_free);}
+
+function load_buffers() {
+	let DOF = 2*(nelx+1)*(nely+1);
+	let dof = dof_free.length;
+	A_ = new Float32Array(dof*dof).fill(0);        // <-- Solver buffers
+	b_ = new Float32Array(dof).fill(0);
+	k_global  = new Float32Array(DOF*DOF).fill(0); // <-- K Buffers
+	k_reduced = new Float32Array(dof*dof).fill(0);
+	u_global  = new Float32Array(DOF).fill(0);}
+
+function find_k0_el() {
+	let E  = 100;
+	let nu =  .3;     
+	let	k1 = ( 1/2 - nu/6 )*E/(1-nu*nu);let k2 = ( 1/8 +   nu/8)*E/(1-nu*nu);
+	let	k3 = (-1/4 - nu/12)*E/(1-nu*nu);let k4 = (-1/8 + 3*nu/8)*E/(1-nu*nu);
+	let	k5 = (-1/4 + nu/12)*E/(1-nu*nu);let k6 = (-1/8 -   nu/8)*E/(1-nu*nu);
+	let	k7 = (       nu/6 )*E/(1-nu*nu);let k8 = ( 1/8 - 3*nu/8)*E/(1-nu*nu);
+	
+	k0_el = new Float32Array([
+		k1, k2, k3, k4, k5, k6, k7, k8,
+        k2, k1, k8, k7, k6, k5, k4, k3,
+       	k3, k8, k1, k6, k7, k4, k5, k2,
+       	k4, k7, k6, k1, k8, k3, k2, k5,
+        k5, k6, k7, k8, k1, k2, k3, k4,
+        k6, k5, k4, k3, k2, k1, k8, k7,
+        k7, k4, k5, k2, k3, k8, k1, k6,
+        k8, k3, k2, k5, k4, k7, k6, k1]);}
+
+function find_k() {
+	let DIM = 2*(nelx+1)*(nely+1); 		k_global.fill(0);
+	let dim = dof_free.length;			k_reduced.fill(0);
+	for (let el = 0; el < nelx*nely; el++) { 					// k_global
+		let xp = Math.pow(x[el], p);
+		for (let xi = 0; xi < 8; xi++) {
+			for (let yi = 0; yi < 8; yi++){
+				let X = el_dof[8*el + xi];
+				let Y = el_dof[8*el + yi];
+				k_global[DIM*Y+X] += xp*k0_el[8*yi+xi];}}};     // k_reduced
+
+	for (let i = 0; i < dim; i++) {
+		for (let j = 0; j < dim; j++) {	
+			let I = dof_free[i];
+			let J = dof_free[j];
+			k_reduced[dim*i + j] = k_global[DIM*I + J];}}}
+
+function solve_kuf() {
+	let DIM = 2*(nelx+1)*(nely+1);
+	let dim = dof_free.length;	
+
+	let i, pivot, row, col, p_val, elim_val;
+
+	for (i = 0; i < dim*dim; i++) { A_[i] = k_reduced[i];} // Set Buffer
+	for (i = 0; i < dim; i++)     { b_[i] = f_global[dof_free[i]];}
+
+	for (pivot = 0; pivot < dim; pivot++) {                // Loop over Pivots
+		p_val = 1/A_[dim*pivot+pivot];
+
+		b_[pivot] *= p_val;                                 // Normalize Row
+		A_[dim*pivot+pivot] = 1;
+		for (col = pivot+1; col < dim; col++) {		
+			A_[dim*pivot + col]*= p_val;}	
+
+		for (row = pivot+1; row < dim; row++) {          
+			elim_val = A_[dim*row+pivot];
+			if (elim_val != 0) {			 
+				b_[row] -= b_[pivot]*elim_val;	 
+				for (col = pivot+1; col < dim; col++) { 	
+					A_[dim*row+col] -= A_[dim*pivot+col]*elim_val;}}}}
+
+	for (pivot = dim-1; pivot > 0; pivot--) {	
+		for (row = pivot-1; row >= 0; row--) {
+			b_[row] -= b_[pivot]*A_[dim*row+pivot];}}
+ 	
+ 	for (i = 0; i < dim; i++) {	u_global[dof_free[i]] = b_[i];}}
+
+function find_compliance() {
+ 	c  = 0;													// Compliance
+ 	dc = [];
+ 	for (let el = 0; el < nelx*nely; el++) {
+    	
+    	let u_el = [];
+    	for (let i1 = 0; i1 < 8; i1++) { 
+    		let ui = u_global[el_dof[8*el+i1]];
+    		u_el.push(ui);
+    		print(ui);}
+
+    	let ku  = [];
+    	for (let i2 = 0; i2 < 8; i2++) {
+    		let sum = 0;
+			for (let j = 0; j < 8; j++) {
+				sum += k0_el[8*i2+j]*u_el[j];}
+			ku.push(sum);}
+		
+    	let uku = 0;
+    	for (let i3 = 0; i3 < 8; i3++) { uku += ku[i3]*u_el[i3];}
+
+ 		c += Math.pow(x[el], p)*uku;
+        dc.push(-p*Math.pow(x[el], p-1)*uku);}}
+
+function oc_update() {
+
+    let lambda_min = 0;   		let move  = 0.2; 				// OC
+    let lambda_max = 100000; 	let x_new = [];
+
+    while (lambda_max-lambda_min > .0001) {
+    	let lambda = 0.5*(lambda_max+lambda_min);
+    	let vol    = 0;
+    	x_new  = [];
+
+        for (let i = 0; i < nelx*nely; i++) {
+        	let xi_old = x[i];
+        	let xi_new = xi_old*Math.sqrt(-dc[i]/lambda);
+           	let xi_max = Math.min(xi_old + move,    1);
+            let xi_min = Math.max(xi_old - move, .001);
+            
+            if (xi_new > xi_max) { xi_new = xi_max; }
+            if (xi_new < xi_min) { xi_new = xi_min; }
+            
+            vol += xi_new;
+            x_new.push(xi_new);}
+
+        if (vol - vol_frac*nelx*nely > 0) {lambda_min = lambda;}
+        else {lambda_max = lambda;}}
+
+    for (let i = 0; i < nelx*nely; i++) {x[i] = x_new[i];}}
+
+/*---------------------------- Shortcut Functions ------------------------*/
+function zeros(dim) {return new Float32Array(dim).fill(0);}
+
+function list(start,end, leap=1) {
+	let L = [];
+	for (let i = start; i <= end; i+=leap){ L.push(i);}
+	return L;}
+
+/*--------------------------- Drawing Functions ---------------------------*/
+function point(x0, y0, color_01) {
+	let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
+	let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
+	
+	let c = 255 - 255*color_01;
+	axis.fillStyle = 'rgb(' + c + ',' + c + ',' + c + ')';
+	axis.fillRect(cx0, cy0, cxRad/axRad, -cyRad/ayRad);}
+
+function set_axis() {
+	axMid = nelx/2;			ayMid = nely/2;
+	axRad = nelx/2 + .1;  	ayRad = nely/2 + .1;}
+
+function draw_elements() {
+	for (let el = 0; el < nelx*nely; el++) {
+		let n  = el_nodes[4*el];
+		let nx = node_coords[2*n];
+		let ny = node_coords[2*n+1];
+		point(nx, ny, x[el]);}}
+
+function label_elements() {
+	for (let el = 0; el < nelx*nely; el++) {
+		let n  = el_nodes[ 4*el ];
+		let nx = node_coords[2*n   ]+.5;
+		let ny = node_coords[2*n+1 ]+.5;
+		text(nx, ny, el);}}
+
+function label_nodes() {
+	for (let n = 0; n < (nelx+1)*(nely+1); n++) {
+		let nx = node_coords[2*n];
+		let ny = node_coords[2*n+1];
+		text(nx, ny, n);}}
+
+function text(x, y, text) {
+	let cx0 =  (x - axMid)/axRad*cxRad + cxRad;
+	let cy0 = -(y - ayMid)/ayRad*cyRad + cyRad;
+	axis.fillText(text, cx0, cy0);}
+
+function clear_canvas() { axis.clearRect(0, 0, 2*cxRad, 2*cyRad);}
+
+/*-------------------------- Print Functions --------------------*/
+function print_mat(A) {
+	let dim    = Math.sqrt(A.length);
+	let string = '';
+	for (let row = 0; row < dim; row++) {
+		for (let col = 0; col < dim; col++) {
+			string += A[row*dim+col].toFixed(2) + ', ';}
+		string += '<br>';}
+	return string;}
+
+function print(data) { printout.innerHTML = data; }
+
+/*-------------------------- Example Scripts ------------------*/
+function load_default() {
+paper.value = `
+nelx =  20;      p        =  3; 
+nely =  20;      vol_frac = .3;
+
+let dof = 2*(nelx+1)*(nely+1);
+
+dof_fixed = list(0, 2*nely+1);
+
+f_global  = zeros(dof);
+f_global[dof-21] = -1;
+
+build();   set_axis();
+
+opt();`
+eval(paper.value);}
+</script> </body> </html>
