@@ -33,7 +33,7 @@ function key_run(){ eval(paper.value); }                 		// Buttons
 function key_save() { localStorage.script = paper.value;			  
 	                  print('--script saved to local browser storage --');}
 function key_open() { paper.value = localStorage.script;
-					  print('--script retrieved from local browser storage');}	                  
+			  print('--script retrieved from local browser storage');}	                  
 function key_new()  { paper.value = starter_code;
 	                  print('-- new script opened --')}
 
@@ -44,23 +44,23 @@ var printout   = document.getElementById('printout');
 var paper      = document.getElementById('paper');
 var canvas     = document.getElementById('canvas');
 	var lims   = canvas.getBoundingClientRect();
-	var cxMid  = lims.x + lims.width/2;		var cxRad = lims.width/2;  
+	var cxMid  = lims.x + lims.width/2;	var cxRad = lims.width/2;  
 	var cyMid  = lims.y + lims.height/2;    var cyRad = lims.height/2; 
 	var aspect = cxRad/cyRad;
 	canvas.width  = 2*cxRad;
 	canvas.height = 2*cyRad;
 
 var axis = canvas.getContext("2d");			
-	var axMid =  0; 				var ayMid = 0;
+	var axMid =  0; 			var ayMid = 0;
 	var axRad = 10*aspect; 			var ayRad = 10; 
 	axis.imageSmoothingEnabled = false;
 
 /*--------------------------- Global Variables ------------------------- */
-var nelx; 	var nu; 	var vol_frac;	var f_global;     // User-Defined
-var nely;	var E; 		var dof_fixed;	var dof_free;
+var nelx; 	var nu; 	var vol_frac;		var f_global;     
+var nely;	var E; 		var dof_fixed;		var dof_free;
 
-var x;			var k0_el;		var el_dof; 			  // Other Globals
-var c;			var dc;  		var el_nodes;
+var x;		var k0_el;	var el_dof; 			  
+var c;		var dc;  	var el_nodes;
 var k_global;	var u_global;	var node_coords;
 var k_reduced;	var u_reduced;	var f_reduced;		var iterations;
 
@@ -105,20 +105,20 @@ eval(starter_code);
 function build() {
 	
 	find_node_coords();	find_el_nodes_dof();	find_dof_free();	
-	find_k0_el();		initialize_x();			find_f_reduced();
+	find_k0_el();		initialize_x();		find_f_reduced();
 	
-	set_axis(-1, nelx+1, -1, nely+1);	}
+	set_axis(-1, nelx+1, -1, nely+1);}
 
 function solve() {
 	find_k_global();     find_k_reduced();
-    find_u_reduced();    find_u_global();
-    find_compliance();}
+    	find_u_reduced();    find_u_global();
+    	find_compliance();}
 
 function opt() {
 	build();
 	let i = 0;
 	function loop() {
-		solve();		oc_update();
+		solve();	oc_update();
 		clear_canvas();	draw_elements(); i++;
 		
 		if (i < iterations) requestAnimationFrame(loop);}
@@ -134,10 +134,10 @@ function erase()     { printout.innerHTML = '';}
 function info()      { printout.innerHTML = printout_text;}
 /*------------------------------ FEA Functions ---------------------------*/
 function find_k0_el() {     
-	let	k1 = ( 1/2 - nu/6 )*E/(1-nu*nu);	k2 = ( 1/8 +   nu/8)*E/(1-nu*nu);
-	let	k3 = (-1/4 - nu/12)*E/(1-nu*nu);	k4 = (-1/8 + 3*nu/8)*E/(1-nu*nu);
-	let	k5 = (-1/4 + nu/12)*E/(1-nu*nu);	k6 = (-1/8 -   nu/8)*E/(1-nu*nu);
-	let	k7 = (       nu/6 )*E/(1-nu*nu);	k8 = ( 1/8 - 3*nu/8)*E/(1-nu*nu);
+	let k1 = ( 1/2 - nu/6 )*E/(1-nu*nu);	let k2 = ( 1/8 +   nu/8)*E/(1-nu*nu);
+	let k3 = (-1/4 - nu/12)*E/(1-nu*nu);	let k4 = (-1/8 + 3*nu/8)*E/(1-nu*nu);
+	let k5 = (-1/4 + nu/12)*E/(1-nu*nu);	let k6 = (-1/8 -   nu/8)*E/(1-nu*nu);
+	let k7 = (       nu/6 )*E/(1-nu*nu);	let k8 = ( 1/8 - 3*nu/8)*E/(1-nu*nu);
 	k0_el = new Sushi.Matrix.fromArray(
 	       [[k1, k2, k3, k4, k5, k6, k7, k8],
            	[k2, k1, k8, k7, k6, k5, k4, k3],
@@ -186,7 +186,7 @@ function find_compliance() {
         dc.push(-p*Math.pow(x.get(el,0),p-1)*uku);}}
 
 function oc_update() {
-    let lambda_min = 0;   		let move  = 0.2; 
+    let lambda_min = 0;   	let move  = 0.2; 
     let lambda_max = 100000; 	let x_new = new Sushi.Matrix(nelx*nely,1); 
 
     while ((lambda_max-lambda_min) > .0001) {
@@ -224,14 +224,14 @@ function find_el_nodes_dof() {
 		for (let ey = 0; ey < nely; ey++) {
 			
 			let upleft =(nely+1)*(ex)+ey+1; let upright =(nely+1)*(ex+1)+ey+1;
-        	let lowleft=(nely+1)*(ex)+ey;   let lowright=(nely+1)*(ex+1)+ey;  
+        		let lowleft=(nely+1)*(ex)+ey;   let lowright=(nely+1)*(ex+1)+ey;  
         	
-        	el_nodes[el_count] = [lowleft, lowright, upright, upleft];
-        	el_dof[  el_count] = 
+        		el_nodes[el_count] = [lowleft, lowright, upright, upleft];
+        		el_dof[  el_count] = 
         		[2*lowleft, 2*lowleft+1, 2*lowright,2*lowright+1,
-             	 2*upright, 2*upright+1, 2*upleft  ,2*upleft+1];
-        	el_count++;}}
-    el_dof = new Sushi.Matrix.fromArray(el_dof);}
+             	 	2*upright, 2*upright+1, 2*upleft  ,2*upleft+1];
+        		el_count++;}}
+   	el_dof = new Sushi.Matrix.fromArray(el_dof);}
 
 function find_dof_free() {
 	dof_free = []; 												
@@ -252,11 +252,8 @@ function find_f_reduced() {
 	for (let i = 0; i < dof_free.cols; i++) {
 		f_reduced.set(i,0, f_global.get(dof_free.get(0,i),0));}}
 
-
 /* ---------------------------- Print Functions ---------------------------*/
 function print(data) { printout.innerHTML = data; }
-
-
 
 /*--------------------------- Drawing Functions ---------------------------*/
 function point(x0, y0, color_01) {
