@@ -23,8 +23,6 @@ This is a work-in-progress.  Right now, the program can only handle 20x20 meshes
 
 All of this fixes are pretty difficult.  If anyone is aware of a GPU-accelerated linear system solver (not just mult and add), please let me know.  Also, sushi.js is awesome for matrices < [500x500].  However, it doesn't have a linear-solver.  Only a matrix inverter (too expensive).  The linear solver in version top_2 used same approach as sushi: work with 1d Float32Arrays, but saves on cost because it just solves (not invert) the matrix.
 
-Right now, writing a solver with GLSL looks like the most promising option.  The next couple weeks will be spent learning about WebGL/GLSL and posting scripts in WebGL repository.
-
 *To Do*
 * add support for compliant mechanisms
 * add support for multi-load cases
@@ -33,16 +31,21 @@ Right now, writing a solver with GLSL looks like the most promising option.  The
 * add easier access to node/element labeler
 * add option to plot with displacement
 
-#### Truss Opt Gui
+#### Finite-Element Analysis for Truss
 
 `finite_lite_min.html`: Up-to-date version
 
+`finite_lite.html:` Version with More features
+
 *About*
 
-Truss Optimization Gui with JavaScript.  `Sushi.js` Used for Matrix Operations. Next step is adding OC Method and examples with more elements.
+Truss Optimization Gui with JavaScript.  `Sushi.js` Used for Matrix Operations. 
 
-
-
+*To Do:*
+* Add OC Method
+* Add More Examples
+* Fix Finite_gui.html
+* Write script for 3d truss
 
 
 
