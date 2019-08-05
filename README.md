@@ -5,7 +5,7 @@ Topology Optimization with JavaScript
 * `top_0.html`: initial topopt script *(needs sushi)*
 * `top_1.html`: added windowing *(needs sushi)*
 * `top_2.html`: wrote in custom ku=f solver *(no sushi)*
-* `sushi.js`: *-- External Matrix Library -- *
+* `sushi.js`: *External Matrix Library*
 
 ### About
 
