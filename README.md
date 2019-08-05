@@ -2,10 +2,10 @@
 
 Topology Optimization with JavaScript
 
-* top_0: initial topopt script
-* top_1: added windowing
-* top_2: wrote in custom ku=f solver
-* sushi: **External Matrix Library** used for versions 0 and 1.
+* `top_0.html`: initial topopt script *(needs sushi)*
+* `top_1.html`: added windowing *(needs sushi)*
+* `top_2.html`: wrote in custom ku=f solver *(no sushi)*
+* `sushi.s`: **External Matrix Library**
 
 ### About
 
