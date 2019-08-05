@@ -1,0 +1,286 @@
+<!-- top.html -->
+<!-- - - - - - - - -  Document Layout (HTML, CSS) - - - - - - - - -->
+
+<!DOCTYPE html> <html> <head> <style> 
+	body {  background-color:#333333;}
+	.key {  top:0%;         height:5%;      color:#bbbbbb;   
+          	width:5%;   	position:fixed;	background-color:#333333;
+        	border:none;	font-size:16px; }
+	.key:hover { background-color: #334433; }
+	.key:active{ background-color: #333344; } </style> </head> <body> 
+
+<button class="key" onmousedown="key_run()" style="left:0%;">  Run  </button>
+<button class="key" onmousedown="key_save()"style="left:5%;">  Save </button>
+<button class="key" onmousedown="key_open()" style="left:10%;"> Open </button>
+<button class="key" onmousedown="key_new()" style="left:15%;"> New  </button>
+<button class="key" onmousedown="key_info()" style="left:20%"> Info </button>
+<textarea id='paper' spellcheck = 'false'
+    style="top:5%;      height:95%;     position:fixed; background-color:#dde3ee;
+           left:0%;     width:50%;    	font-size:16px;	color:#000000;
+           border:none; outline:none;   padding:0;      resize:none;"> </textarea>
+
+<canvas id='canvas'
+    style="top:5%;       height:60%;    background-color:#d7d9d8;
+           left:50%;     width:50%;     position:fixed;"> </canvas>
+
+<div id='printout' 
+    style="top:66%;      height:38%;    background-color:#eaeaea;
+           left:50%;     width:50%;     color:#000000; 
+           font-size:16px; position:fixed;"> </div>
+<script src='sushi.js'> </script> <script> 
+
+function key_run(){ eval(paper.value); }                 		// Buttons
+function key_save() { localStorage.script = paper.value;			  
+	                  print('--script saved to local browser storage --');}
+function key_open() { paper.value = localStorage.script;
+					  print('--script retrieved from local browser storage');}	                  
+function key_new()  { paper.value = starter_code;
+	                  print('-- new script opened --')}
+
+function key_info() { info();}
+
+/*--------------------- Document Layout (Javascript) --------------------*/
+var printout   = document.getElementById('printout');
+var paper      = document.getElementById('paper');
+var canvas     = document.getElementById('canvas');
+	var lims   = canvas.getBoundingClientRect();
+	var cxMid  = lims.x + lims.width/2;		var cxRad = lims.width/2;  
+	var cyMid  = lims.y + lims.height/2;    var cyRad = lims.height/2; 
+	var aspect = cxRad/cyRad;
+	canvas.width  = 2*cxRad;
+	canvas.height = 2*cyRad;
+
+var axis = canvas.getContext("2d");			
+	var axMid =  0; 				var ayMid = 0;
+	var axRad = 10*aspect; 			var ayRad = 10; 
+	axis.imageSmoothingEnabled = false;
+
+/*--------------------------- Global Variables ------------------------- */
+var nelx; 	var nu; 	var vol_frac;	var f_global;     // User-Defined
+var nely;	var E; 		var dof_fixed;	var dof_free;
+
+var x;			var k0_el;		var el_dof; 			  // Other Globals
+var c;			var dc;  		var el_nodes;
+var k_global;	var u_global;	var node_coords;
+var k_reduced;	var u_reduced;	var f_reduced;		var iterations;
+
+/*--------------------------- On Page Load() ---------------------------*/
+var printout_text = `
+This is a work-in-progress. The next step is finding faster way to solve:
+ku = f.  If anyone knows of an existing gpu-accelerated linear algebra library for javascript (that solves linear systems)
+
+
+The program is two files: top.html and sushi.js. Top.html defines page layout and fea functions. Sushi.js defines matrix objects and methods. Press cntrl+u to view top.html source code. <a href="http://www.visual-math.com/sushi.js"> sushi.js file </a> (code+documentation)  <br> <br>`;
+
+var starter_code =      
+`/* ---------------- Parameters ---------------- */
+nelx =  10; nely =  10;	   E    = 100;
+nu   =  .3; p    =   3;    vol_frac = .3;	
+
+dof_fixed = []; 
+for (let i = 0; i < 2*nely; i++) { 
+    dof_fixed.push(i);}
+
+let dof  = 2*(nelx+1)*(nely+1);
+f_global = new Sushi.Matrix(dof,1);
+f_global.set(dof-1,0,-1);
+
+/* ----------------- Setup --------------------- */
+find_node_coords();  find_el_nodes_dof(); 
+find_dof_free();     find_f_reduced(); 
+initialize_x();      find_k0_el();     set_axis();
+
+/* ------------------ OC Loop ------------------- */
+for (let i = 1; i < 21; i++) {
+   setTimeout(function() {
+      find_k_global();     find_k_reduced();
+      find_u_reduced();    find_u_global();
+      find_compliance();   oc_update();
+      clear_canvas();  	   draw_elements();
+      print('iteration: ' + i);}, 1);}`;
+paper.value = starter_code;
+eval(starter_code);
+
+/*----------------------- High Level Functions --------------------------*/
+function build() {
+	
+	find_node_coords();	find_el_nodes_dof();	find_dof_free();	
+	find_k0_el();		initialize_x();			find_f_reduced();
+	
+	set_axis(-1, nelx+1, -1, nely+1);	}
+
+function solve() {
+	find_k_global();     find_k_reduced();
+    find_u_reduced();    find_u_global();
+    find_compliance();}
+
+function opt() {
+	build();
+	let i = 0;
+	function loop() {
+		solve();		oc_update();
+		clear_canvas();	draw_elements(); i++;
+		
+		if (i < iterations) requestAnimationFrame(loop);}
+	loop();}
+
+function run_time(func) {
+	let t0 = new Date().getTime();
+	func();
+	print(new Date().getTime() - t0);}
+
+function write(text) { printout.innerHTML += '<br/>' + text;}
+function erase()     { printout.innerHTML = '';}
+function info()      { printout.innerHTML = printout_text;}
+/*------------------------------ FEA Functions ---------------------------*/
+function find_k0_el() {     
+	let	k1 = ( 1/2 - nu/6 )*E/(1-nu*nu);	k2 = ( 1/8 +   nu/8)*E/(1-nu*nu);
+	let	k3 = (-1/4 - nu/12)*E/(1-nu*nu);	k4 = (-1/8 + 3*nu/8)*E/(1-nu*nu);
+	let	k5 = (-1/4 + nu/12)*E/(1-nu*nu);	k6 = (-1/8 -   nu/8)*E/(1-nu*nu);
+	let	k7 = (       nu/6 )*E/(1-nu*nu);	k8 = ( 1/8 - 3*nu/8)*E/(1-nu*nu);
+	k0_el = new Sushi.Matrix.fromArray(
+	       [[k1, k2, k3, k4, k5, k6, k7, k8],
+           	[k2, k1, k8, k7, k6, k5, k4, k3],
+       	 	[k3, k8, k1, k6, k7, k4, k5, k2],
+       	 	[k4, k7, k6, k1, k8, k3, k2, k5],
+        	[k5, k6, k7, k8, k1, k2, k3, k4],
+        	[k6, k5, k4, k3, k2, k1, k8, k7],
+        	[k7, k4, k5, k2, k3, k8, k1, k6],
+        	[k8, k3, k2, k5, k4, k7, k6, k1]]);}
+
+function find_k_global() {
+	k_global = new Sushi.Matrix(2*(nelx+1)*(nely+1),2*(nelx+1)*(nely+1));
+	for (let el = 0; el < x.rows; el++) {
+		for (let i = 0; i < 8; i++) {
+			for (let j = 0; j < 8; j++) {
+				let ei = el_dof.get(el,i);	let k0_ij = k0_el.get(i,j);
+				let ej = el_dof.get(el,j); 	let k_ij  = k_global.get(ei, ej);
+
+				let k_ij_new = k_ij + k0_ij*Math.pow(x.get(el,0),p);
+				k_global.set(ei,ej, k_ij_new);}}}}
+
+function find_k_reduced() {
+	k_reduced = new Sushi.Matrix(dof_free.cols, dof_free.cols);
+	for (let i = 0; i < dof_free.cols; i++) {
+		for (let j = 0; j < dof_free.cols; j++) {
+ 			let k_val = k_global.get(dof_free.get(0,i), dof_free.get(0,j));
+        	k_reduced.set(i,j,k_val);}}}
+
+function find_u_reduced() {
+    u_reduced = k_reduced.inverse().mul(f_reduced);;}
+
+function find_u_global() {
+	u_global = new Sushi.Matrix(f_global.length,1);
+    for (let i = 0; i < dof_free.cols; i++) {
+        u_global.set(dof_free.get(0,i),0,u_reduced.get(i,0));}}
+
+function find_compliance() {
+ 	c = 0;	dc = [];
+    for (let el = 0; el < x.rows; el++) {
+    	let u_el = new Sushi.Matrix(8,1);
+    	for (let i = 0; i < 8; i++) {
+    		u_el.set(i,0,u_global.get(el_dof.get(el,i),0));}
+    	
+    	let uku = ((u_el.t().mul(k0_el)).mul(u_el)).get(0,0);
+ 		c += Math.pow(x.get(el,0),p)*uku;
+        dc.push(-p*Math.pow(x.get(el,0),p-1)*uku);}}
+
+function oc_update() {
+    let lambda_min = 0;   		let move  = 0.2; 
+    let lambda_max = 100000; 	let x_new = new Sushi.Matrix(nelx*nely,1); 
+
+    while ((lambda_max-lambda_min) > .0001) {
+    	let lambda = 0.5*(lambda_max+lambda_min);
+    	let vol    = 0;
+
+        for (let i = 0; i < x.rows; i++) {
+        	let xi_new = x.get(i,0)*Math.sqrt(-dc[i]/lambda);
+           	let xi_max = Math.min(x.get(i,0)+move,    1);
+            let xi_min = Math.max(x.get(i,0)-move, .001);
+            
+            if (xi_new > xi_max) { xi_new = xi_max; }
+            if (xi_new < xi_min) { xi_new = xi_min; }
+            
+            vol += xi_new;	x_new.set(i,0,xi_new);}
+
+        if (vol - vol_frac*nelx*nely > 0) { lambda_min = lambda;}
+        else {lambda_max = lambda;}}
+    x = x_new;}
+
+/*---------------------------- Setup Functions --------------------------------*/
+function find_node_coords() {
+	node_coords = [];											
+	let node_count  = 0; 							
+	for (let nx = 0; nx < nelx+1; nx++) {
+ 		for (let ny = 0; ny < nely+1; ny++) {
+        	node_coords[node_count] = [nx, ny];
+        	node_count++;}}}
+
+function find_el_nodes_dof() {
+	el_nodes     = [];								
+	el_dof       = [];
+	let el_count = 0;											
+	for (let ex = 0; ex < nelx; ex++) {
+		for (let ey = 0; ey < nely; ey++) {
+			
+			let upleft =(nely+1)*(ex)+ey+1; let upright =(nely+1)*(ex+1)+ey+1;
+        	let lowleft=(nely+1)*(ex)+ey;   let lowright=(nely+1)*(ex+1)+ey;  
+        	
+        	el_nodes[el_count] = [lowleft, lowright, upright, upleft];
+        	el_dof[  el_count] = 
+        		[2*lowleft, 2*lowleft+1, 2*lowright,2*lowright+1,
+             	 2*upright, 2*upright+1, 2*upleft  ,2*upleft+1];
+        	el_count++;}}
+    el_dof = new Sushi.Matrix.fromArray(el_dof);}
+
+function find_dof_free() {
+	dof_free = []; 												
+	for (let i = 0; i < 2*(nelx+1)*(nely+1); i++) {				
+		let found = 0;
+		for (let j = 0; j < dof_fixed.length; j++) {
+			if (i == dof_fixed[j]) {found = 1;}}
+		if (found == 0) {
+			dof_free.push(i);}}
+	dof_free = new Sushi.Matrix.fromArray([dof_free]);}
+
+function initialize_x() {
+	x = new Sushi.Matrix(nelx*nely,1); 								
+	for (let i = 0; i < x.rows; i++) { x.set(i,0,vol_frac);}}	
+
+function find_f_reduced() { 
+	f_reduced = new Sushi.Matrix(dof_free.cols, 1);		
+	for (let i = 0; i < dof_free.cols; i++) {
+		f_reduced.set(i,0, f_global.get(dof_free.get(0,i),0));}}
+
+
+/* ---------------------------- Print Functions ---------------------------*/
+function print(data) { printout.innerHTML = data; }
+
+
+
+/*--------------------------- Drawing Functions ---------------------------*/
+function point(x0, y0, color_01) {
+	let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
+	let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
+	
+	let c = 255 - 255*color_01;
+	axis.fillStyle = 'rgb(' + c + ',' + c + ',' + c + ')';
+	axis.fillRect(cx0, cy0, cxRad/axRad, -cyRad/ayRad);}
+
+function set_axis() {
+	axMid = nelx/2 + 1/2;	ayMid = nely/2 + 1/2;
+	axRad = nelx/2 + 1;  	ayRad = nely/2 + 1;}
+
+function draw_elements() {
+	for (let el = 0; el < el_nodes.length; el++) {
+		let n  = el_nodes[el][0];
+		let nx = node_coords[n][0];
+		let ny = node_coords[n][1];
+		point(nx, ny, x.get(el,0));}}
+
+function clear_canvas() { axis.clearRect(0, 0, 2*cxRad, 2*cyRad);}
+
+/*----------------------- Default Script -----------------------------*/
+</script> </body> </html>
+
+<!-- Silas Henderson, IUPUI -->
