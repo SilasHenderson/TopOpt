@@ -1,0 +1,184 @@
+<!-- - [ top.html ] - - - - - - - - - - - - - - - - - - - $/# - - -->
+<html> <body>  
+
+<div style = "top:1%; 	height:8%; color:#dddddd; 
+              left:20%; width:50%; position:fixed;"> O.C. Method for Q4 </div>
+
+<button onmousedown = "opt()" 
+	 style = "top:1%;  	height:8%;
+    		  left:1%; 	width:10%; position:fixed;"> Optimize! </button>
+
+<canvas id = 'canvas' 
+     style = "top:10%;	height:90%; background-color:#d7d9d8;
+           	  left:0%;  width:100%;	position:fixed;">  </canvas>
+
+<script src = 'sushi.js'> </script> <script>
+
+document.body.style.backgroundColor = '#222222';
+
+var canvas = document.getElementById('canvas');
+	var lims  = canvas.getBoundingClientRect();
+	var cxMid = lims.x + lims.width/2;		var cxRad = lims.width/2;  
+	var cyMid = lims.y + lims.height/2;    	var cyRad = lims.height/2; 
+	canvas.width = 2*cxRad;					canvas.height = 2*cyRad;
+
+var axis = canvas.getContext("2d");		var axMid =  0; var ayMid = 0;
+	axis.imageSmoothingEnabled = false; var axRad =  7; var ayRad = 10; 
+
+/*--------------------------- Setup --------------------------------------*/
+var nelx = 10; 	var nu =  .3;  	var vol_frac = .3;	
+var nely = 10;	var E  = 100; 	var p  = 3;
+
+var dof_fixed = []; for (let i = 0; i < 2*nely; i++) { dof_fixed.push(i);}
+
+var el_nodes;	var dof_free;	var el_dof; 	var node_coords;	
+var k_global;	var u_global;	var f_global;	var k0_el;
+var k_reduced;	var u_reduced;	var f_reduced;	var x;		
+var c;			var dc;
+
+set_axis(-1, nelx+1, -1, nely+1);
+
+function opt() {
+	find_dof_free();	find_el_nodes_dof();	find_node_coords();
+	find_k0_el();		initialize_x();			find_f_global_reduced();
+	for (let i = 0; i < 50; i++) { setTimeout(
+		function () { clear_canvas(); solve(); 
+					  oc_update(); 	  draw_elements();}, 1);}}
+
+/*------------------------------ FEA Functions ---------------------------*/
+function find_k0_el() {     
+	let	k1 = ( 1/2 - nu/6 )*E/(1-nu*nu);	k2 = ( 1/8 +   nu/8)*E/(1-nu*nu);
+	let	k3 = (-1/4 - nu/12)*E/(1-nu*nu);	k4 = (-1/8 + 3*nu/8)*E/(1-nu*nu);
+	let	k5 = (-1/4 + nu/12)*E/(1-nu*nu);	k6 = (-1/8 -   nu/8)*E/(1-nu*nu);
+	let	k7 = (       nu/6 )*E/(1-nu*nu);	k8 = ( 1/8 - 3*nu/8)*E/(1-nu*nu);
+	k0_el = new Sushi.Matrix.fromArray(
+	       [[k1, k2, k3, k4, k5, k6, k7, k8],
+           	[k2, k1, k8, k7, k6, k5, k4, k3],
+       	 	[k3, k8, k1, k6, k7, k4, k5, k2],
+       	 	[k4, k7, k6, k1, k8, k3, k2, k5],
+        	[k5, k6, k7, k8, k1, k2, k3, k4],
+        	[k6, k5, k4, k3, k2, k1, k8, k7],
+        	[k7, k4, k5, k2, k3, k8, k1, k6],
+        	[k8, k3, k2, k5, k4, k7, k6, k1]]);}
+
+function solve() {
+	let k_global = new Sushi.Matrix(2*(nelx+1)*(nely+1),2*(nelx+1)*(nely+1));
+	for (let el = 0; el < x.rows; el++) {
+		for (let i = 0; i < 8; i++) {
+			for (let j = 0; j < 8; j++) {
+				let ei = el_dof[el][i];		let k0_ij = k0_el.get(i,j);
+				let ej = el_dof[el][j];  	let k_ij  = k_global.get(ei, ej);
+
+				let k_ij_new = k_ij + k0_ij*Math.pow(x.get(el,0),p);
+				k_global.set(ei,ej, k_ij_new);}}}
+
+	let k_reduced = new Sushi.Matrix(dof_free.length, dof_free.length);
+	for (let i = 0; i < dof_free.length; i++) {
+		for (let j = 0; j < dof_free.length; j++) {
+ 			let k_val = k_global.get(dof_free[i], dof_free[j]);
+        	k_reduced.set(i,j,k_val);}}
+
+    let k_inv     = k_reduced.inverse();
+	let u_reduced = k_inv.mul(f_reduced);
+
+	u_global = new Sushi.Matrix(f_global.length,1);
+    for (let i = 0; i < dof_free.length; i++) {
+        u_global.set(dof_free[i],0,u_reduced.get(i,0));}
+
+ 	c = 0;	dc = [];
+    for (let el = 0; el < x.rows; el++) {
+    	let u_el = new Sushi.Matrix(8,1);
+    	for (let i = 0; i < 8; i++) {
+    		u_el.set(i,0,u_global.get(el_dof[el][i],0));}
+    	
+    	let uku = ((u_el.t().mul(k0_el)).mul(u_el)).get(0,0);
+ 		c += Math.pow(x.get(el,0),p)*uku;
+        dc.push(-p*Math.pow(x.get(el,0),p-1)*uku);}}
+
+function oc_update() {
+    let lambda_min = 0;   		let move  = 0.2; 
+    let lambda_max = 100000; 	let x_new = new Sushi.Matrix(nelx*nely,1); 
+
+    while ((lambda_max-lambda_min) > .0001) {
+    	let lambda = 0.5*(lambda_max+lambda_min);
+    	let vol    = 0;
+
+        for (let i = 0; i < x.rows; i++) {
+        	let xi_new = x.get(i,0)*Math.sqrt(-dc[i]/lambda);
+           	let xi_max = Math.min(x.get(i,0)+move,    1);
+            let xi_min = Math.max(x.get(i,0)-move, .001);
+            
+            if (xi_new > xi_max) { xi_new = xi_max; }
+            if (xi_new < xi_min) { xi_new = xi_min; }
+            
+            vol += xi_new;	x_new.set(i,0,xi_new);}
+
+        if (vol - vol_frac*nelx*nely > 0) { lambda_min = lambda;}
+        else {lambda_max = lambda;}}
+    x = x_new;}
+
+/*---------------------------- Setup Functions --------------------------------*/
+function find_node_coords() {
+	node_coords = [];											
+	let node_count  = 0; 							
+	for (let nx = 0; nx < nelx+1; nx++) {
+ 		for (let ny = 0; ny < nely+1; ny++) {
+        	node_coords[node_count] = [nx, ny];
+        	node_count++;}}}
+
+function find_el_nodes_dof() {
+	el_nodes     = [];								
+	el_dof       = [];
+	let el_count = 0;											
+	for (let ex = 0; ex < nelx; ex++) {
+		for (let ey = 0; ey < nely; ey++) {
+			let upleft  = (nely+1)*(ex)+ey+1; let upright  = (nely+1)*(ex+1)+ey+1;
+        	let lowleft = (nely+1)*(ex)+ey;   let lowright = (nely+1)*(ex+1)+ey;   
+        	
+        	el_nodes[el_count] = [lowleft, lowright, upright, upleft];
+        	el_dof[el_count]   = [2*lowleft, 2*lowleft+1, 2*lowright, 2*lowright+1,
+            	                  2*upright, 2*upright+1, 2*upleft  , 2*upleft+1];
+        	el_count++;}}}
+
+function find_dof_free() {
+	dof_free = []; 												
+	for (let i = 0; i < 2*(nelx+1)*(nely+1); i++) {				
+		let found = 0;
+		for (let j = 0; j < dof_fixed.length; j++) {
+			if (i == dof_fixed[j]) {found = 1;}}
+		if (found == 0) {dof_free.push(i);}}}
+
+function initialize_x() {
+	x = new Sushi.Matrix(nelx*nely,1); 								
+	for (let i = 0; i < x.rows; i++) { x.set(i,0,vol_frac);}}	
+
+function find_f_global_reduced() {
+	f_global = new Sushi.Matrix(2*(nelx+1)*(nely+1),1);		
+	f_global.set(2*(nelx+1)*(nely+1)-1, 0,-1);             
+	f_reduced = new Sushi.Matrix(dof_free.length, 1);		
+	for (let i = 0; i < dof_free.length; i++) {
+		f_reduced.set(i,0, f_global.get(dof_free[i],0));}}
+
+/*--------------------------- Drawing Functions ---------------------------*/
+function point(x0, y0, color_01) {
+	let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
+	let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
+	
+	let c = 255 - 255*color_01;
+	axis.fillStyle = 'rgb(' + c + ',' + c + ',' + c + ')';
+	axis.fillRect(cx0, cy0, cxRad/axRad, -cyRad/ayRad);}
+
+function set_axis(xlow, xhigh, ylow, yhigh) {
+	axMid = (xhigh + xlow)/2;	ayMid = (yhigh + ylow)/2;
+	axRad = (xhigh - xlow)/2;	ayRad = (yhigh - ylow)/2;}
+
+function draw_elements() {
+	for (let el = 0; el < el_nodes.length; el++) {
+		let n  = el_nodes[el][0];
+		let nx = node_coords[n][0];
+		let ny = node_coords[n][1];
+		point(nx, ny, x.get(el,0));}}
+
+function clear_canvas() { axis.clearRect(0, 0, 2*cxRad, 2*cyRad);}
+
+</script> </body> </html>
