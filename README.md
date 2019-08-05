@@ -1,32 +1,22 @@
-# TopOpt
-
-
-### top.html
+## top.html
 
 Topology Optimization with JavaScript.  This is a JavaScript interpretation of Ole Sigmund's '99-Line' top.m Matlab code. It runs OC Method optimization on a mesh of Q4 elements.  The files related to this project are:
+
+*Files: top.html*
 
 * `top_0.html`: minimal demo
 * `top_1.html`: working version
 * `top_2.html`: faster version
 * `sushi.js`: *External Matrix Library*
 
-*About top.html*
+*About: top.html*
 
-The challenge *right now* for this project is to find a faster solver for ku = f.  Numberical computing in javascript is still new. High-speed numerical libraries like `numpy` don't exist yet for javascript.  This is because javascript needs to run *safely in the browser*.  The native computer's full power isn't used, because javascript is sand-boxed within the browser.  However, there are already **three *safe* ways** of getting the local system to contribute more to the computation effort. These are
+The challenge *right now* for this project is to find a faster solver for ku = f.  Numberical computing in javascript is still new. High-speed numerical libraries like `numpy` don't exist yet for javascript.  This is because javascript needs to run *safely in the browser*.  The native computer's full power isn't used, because javascript is sand-boxed within the browser.  However, there are already *safe ways* of getting the local system to contribute more to the computation effort. These are`WASM`, `WebGL`,`Web-Workers`.
 
-* `WASM`: (a new Low-Level Virtual Machine)
-* `WebGL` (Use the GPU for math)
-* `Web-Workers` ( Use more Threads )
-
-*To Do*
-* Write a more efficient sparse-solver
-* distribute computation in web-workers
-* Use approximation methods for ku = f
-* parallelize solving ku = f using `GLSL`
-* write ku = f solver with WebGL2's new `Compute Shader`
-* compile ku = f solver with `wasm`
-* write a `node-OpenCL` version of solver
-* wait for `tensorflow.js` to add lin-solve
+*To Do: top.html*
+* Write a more efficient *sparse-solver*
+* distribute computation in `web-workers`
+* Use *approximation* methods for ku = f
 * add support for compliant mechanisms
 * add support for multi-load cases
 * add support for passive elements
@@ -34,17 +24,19 @@ The challenge *right now* for this project is to find a faster solver for ku = f
 * add easier access to node/element labeler
 * add option to plot with displacement
 
-#### Finite-Element Analysis for Truss
+## finite_lite.html
+
+Truss Optimization App with JavaScript. Uses `Sushi.js` Used for Matrix Operations. 
+
+*Files: finite lite*
 
 `finite_lite_min.html`: Up-to-date version
 
 `finite_lite.html:` Version with More features
 
-*About*
+`finite_gui.html`: Point-and-Click (in progress)
 
-Truss Optimization Gui with JavaScript.  `Sushi.js` Used for Matrix Operations. 
-
-*To Do:*
+*To Do: finite_lite*
 * Add OC Method
 * Add More Examples
 * Fix Finite_gui.html
