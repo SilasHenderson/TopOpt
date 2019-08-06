@@ -4,13 +4,13 @@
 
 The challenge *right now* for this project is to find a *faster solver* for **ku = f**.  High-speed numerical libraries like `numpy` don't exist yet for javascript. There are already *safe ways* of getting the local system to contribute more to the computation effort, but implementations for linear algebra aren't fully cooked yet.  Hopefully, `tensorflow.js` will add a linear system solver (like `tf.py`).  If not, `WASM`, `WebGL`,`Web-Workers`, all offer significant opportunities for *savings*.
 
-*files: top.html*
+*files:*
 * `top_0.html`: minimal demo
 * `top_1.html`: working version
 * `top_2.html`: faster version
 * `sushi.js`: *External Matrix Library*
 
-*to-do: top.html*
+*to-do:*
 * Write a more efficient *sparse-solver*
 * distribute computation in `web-workers`
 * Use *approximation* methods for ku = f
@@ -23,7 +23,7 @@ The challenge *right now* for this project is to find a *faster solver* for **ku
 ## finite_lite.html
 Truss Optimization App with JavaScript. Uses `Sushi.js` Used for Matrix Operations. 
 
-*files: finite lite*
+*files:*
 
 `finite_lite_min.html`: Up-to-date version
 
@@ -31,7 +31,7 @@ Truss Optimization App with JavaScript. Uses `Sushi.js` Used for Matrix Operatio
 
 `finite_gui.html`: Point-and-Click (in progress)
 
-*to-do: finite_lite*
+*to-do:*
 * Add OC Method
 * Add More Examples
 * Fix Finite_gui.html
