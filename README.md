@@ -25,11 +25,9 @@ Truss Optimization App with JavaScript. Uses `Sushi.js` Used for Matrix Operatio
 
 *files:*
 
-`finite_lite_min.html`: Up-to-date version
-
-`finite_lite.html:` Version with More features
-
-`finite_gui.html`: Point-and-Click (in progress)
+* `finite_lite_min.html`: Up-to-date version
+* `finite_lite.html:` Version with More features
+* `finite_gui.html`: Point-and-Click (in progress)
 
 *to-do:*
 * Add OC Method
