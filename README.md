@@ -2,7 +2,8 @@
 
 *Topology Optimization* with *JavaScript*.  
 
-This is a JavaScript interpretation of Ole Sigmund's `top.m` Matlab code. It runs *OC Method* optimization on a mesh of *Q4 elements*.
+JavaScript interpretation of Ole Sigmund's `top.m` (Matlab) <br/>
+Runs *OC Method* optimization on a mesh of *Q4 elements*.
 
 *files:*
 * `top_0.html`: minimal demo
@@ -21,10 +22,9 @@ This is a JavaScript interpretation of Ole Sigmund's `top.m` Matlab code. It run
 * improve gui
 
 ## finite_lite.html
-Truss Optimization app with JavaScript. Uses `Sushi.js` for Matrix Operations. 
+FEA app with JavaScript. Uses `Sushi.js` for Matrix Operations. 
 
 *files:*
-
 * `finite_lite_min.html`: Up-to-date version
 * `finite_lite.html:` Version with More features
 * `finite_gui.html`: Point-and-Click (in progress)
@@ -34,3 +34,4 @@ Truss Optimization app with JavaScript. Uses `Sushi.js` for Matrix Operations.
 * Add More Examples
 * Fix Finite_gui.html
 * Write script for 3d truss
+* Add more optimization options
