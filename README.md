@@ -1,6 +1,8 @@
 ## top.html
 
-*Topology Optimization* with *JavaScript*.  This is a JavaScript interpretation of Ole Sigmund's `top.m` Matlab code. It runs *OC Method* optimization on a mesh of *Q4 elements*.
+*Topology Optimization* with *JavaScript*.  
+
+This is a JavaScript interpretation of Ole Sigmund's `top.m` Matlab code. It runs *OC Method* optimization on a mesh of *Q4 elements*.
 
 *files:*
 * `top_0.html`: minimal demo
@@ -19,7 +21,7 @@
 * improve gui
 
 ## finite_lite.html
-Truss Optimization App with JavaScript. Uses `Sushi.js` Used for Matrix Operations. 
+Truss Optimization app with JavaScript. Uses `Sushi.js` for Matrix Operations. 
 
 *files:*
 
