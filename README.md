@@ -10,7 +10,6 @@ Runs *OC Method* optimization on a mesh of *Q4 elements*.
 * `top_1.html`: working version
 * `top_2.html`: faster version
 * `sushi.js`: *External Matrix Library*
-
 * `top_cg.html`: test with conjugate gradient solver
 
 *to-do:*
