@@ -1,0 +1,169 @@
+<!-- - - - q4 gui - - - &* - - - -->
+
+<!doctype html>
+
+<style>
+	body{background-color:#000000;}
+	button{	position:fixed;	top:0%; width:10%; height:5%; 
+			margin:0px; border:none; text-decoration: none; 
+			font-size:12px; font-family:sans-serif;
+			font-weight:bolder;
+			background-color:#000000; color:#dddddd;  
+        	font-family:sans-serif;}
+	button:hover { background-color:#335533; }
+	button:active{ background-color:#333355; } 
+</style>
+
+<button id="btn_force" style="left:0%;">Force</button>
+<button id="btn_fixed" style="left:10%;">Fixed Pt</button>
+<button id="btn_elem"  style="left:20%;">Element</button>
+<button id="btn_label" style="left:30%;">Label</button>
+<button id="btn_solve"  style="left:40%;">Solve</button>
+
+<canvas id='canvas' style= 
+	"position:fixed; left:0%; top:5%; height:95%; width:50%;
+	 background-color:#cccccc;">
+</canvas> 
+
+<div id='div' style=
+	"position:fixed; left:50%; top:5%; height:95%; width:50%;
+	 background-color:#222222; color:#ffffff;
+	 padding:10px;
+	 font-size:20px;
+	 font-family:monospace;"> 
+</div>
+
+<script>
+
+/*------------------------- variables -----------------------*/
+let btn_force = document.getElementById('btn_force');
+let btn_fixed = document.getElementById('btn_fixed');
+let btn_elem  = document.getElementById('btn_elem');
+let btn_solve = document.getElementById('btn_solve');
+let btn_label = document.getElementById('btn_label');
+let div       = document.getElementById('div');
+let canvas    = document.getElementById('canvas');
+
+let ctx = canvas.getContext('2d');
+
+let mouse_over = 0;
+let mouse_down = 0;
+let mouse_pos = [0,0];
+let grid_pos  = [0,0];
+
+let canvas_pos = [];
+let ax_pos     = [.05,.05,.9,.9];  
+let ax_lims    = [0,0,10,10];		
+let gui_mode   = 'add_elements';
+
+update_canvas_pos();
+
+/*---------------------------- loop ----------------------*/
+setInterval( ()=> {update_canvas_pos()}, 1000);
+main_loop();
+
+function main_loop() {
+	ctx.clearRect(0,0,canvas_pos[2], canvas_pos[3]);
+
+	draw_axes();
+	draw_pointer();
+	display_data();
+
+	requestAnimationFrame(main_loop);}
+
+/*------------------------- mouse -------------------------*/
+document.onmousedown = () => { mouse_down = 1; }
+document.onmouseup   = () => { mouse_down = 0; }
+document.onmousemove = (e) => {
+	let c_n_x =     (e.clientX - canvas_pos[0])/canvas_pos[2];	
+	let c_n_y = 1 - (e.clientY - canvas_pos[1])/canvas_pos[3]; 
+	let a_n_x = (c_n_x - ax_pos[0])/ax_pos[2];
+	let a_n_y = (c_n_y - ax_pos[1])/ax_pos[3];
+	
+	mouse_pos[0] = ax_lims[0] + ax_lims[2]*a_n_x;
+	mouse_pos[1] = ax_lims[1] + ax_lims[3]*a_n_y; 
+	grid_pos[0]  = Math.floor(mouse_pos[0]);
+	grid_pos[1]  = Math.floor(mouse_pos[1]);
+
+	if (mouse_pos[0] < ax_lims[0] || 
+	    mouse_pos[0] > ax_lims[0] + ax_lims[2] ||
+	    mouse_pos[1] < ax_lims[1] || 
+	    mouse_pos[1] > ax_lims[1] + ax_lims[3]) {
+		mouse_over = 0;}
+	else {mouse_over = 1; }}
+
+function draw_axes() {
+ 	box( ax_lims[0], ax_lims[1], ax_lims[2], ax_lims[3], '#eeeeee');
+ 	rect(ax_lims[0], ax_lims[1], ax_lims[2], ax_lims[3], '#000000');
+ 	
+	ctx.fillStyle    = '#000000';
+	ctx.textBaseline = 'top';
+	ctx.textAlign    = 'center';
+	ctx.font = '14px mono';
+	for (let x = 0; x < 11; x++) {
+		ctx.fillText(x, canvas_x(x), canvas_y(0) + 2);}
+
+	ctx.textBaseline = 'middle';
+	ctx.textAlign    = 'right';
+	for (let y = 1; y < 11; y++) {
+		ctx.fillText(y, canvas_x(0)-2, canvas_y(y));}}
+
+function draw_pointer() {
+	if (mouse_over == 1) {
+	if (gui_mode == 'add_elements') {
+		ctx.fillStyle = '#008800';
+		box(grid_pos[0], grid_pos[1], 1, 1);}}}
+
+function box(x, y, w, h, color = '#000044') {
+	ctx.fillStyle = color;
+	let cx = canvas_x(x);
+	let cy = canvas_y(y);	
+	let cw = canvas_w(w);
+	let ch = canvas_h(h);
+	ctx.fillRect(cx, cy, cw, -ch);}
+	
+function rect(x, y, w, h, color = '#000044') {
+	ctx.strokeStyle = color;
+	let cx = canvas_x(x);
+	let cy = canvas_y(y);	
+	let cw = canvas_w(w);
+	let ch = canvas_h(h);
+	ctx.strokeRect(cx, cy, cw, -ch);}
+
+function update_canvas_pos() {
+	canvas_pos[0] = canvas.getBoundingClientRect().x;
+	canvas_pos[1] = canvas.getBoundingClientRect().y;
+	canvas_pos[2] = canvas.getBoundingClientRect().width;
+	canvas_pos[3] = canvas.getBoundingClientRect().height;
+	canvas.width  = canvas_pos[2]; 
+	canvas.height = canvas_pos[3];}
+
+function canvas_x(x) {
+	let cx=(ax_pos[0]+(x-ax_lims[0])/ax_lims[2]*ax_pos[2])*canvas.width;
+	return cx;}
+
+function canvas_y(y) {
+	let cy=canvas.height*( 1 - ax_pos[1] - 
+		(y-ax_lims[1])/ax_lims[3]*ax_pos[3]);
+	return cy;}
+
+function canvas_w(w) {
+	return w/ax_lims[2]*canvas.width*ax_pos[2];}
+
+function canvas_h(h) {
+	return h/ax_lims[3]*canvas.height*ax_pos[3];}
+
+function display_data() {
+	div.innerHTML = 
+	`mouse x: ${mouse_pos[0]} <br>
+	 mouse y: ${mouse_pos[1]} <br> 
+	 mouse over: ${mouse_over} <br><br>
+
+     grid x: ${ grid_pos[0] } <br> 
+     grid y: ${ grid_pos[1] } <br> <br>
+     canvas x: ${canvas_x(mouse_pos[0]).toFixed()} <br>
+     canvas y: ${canvas_y(mouse_pos[1]).toFixed()} <br> <br>
+	 canvas.width: ${canvas.width} <br>
+	 canvas.height: ${canvas.height} <br> <br>`;}
+
+</script>
