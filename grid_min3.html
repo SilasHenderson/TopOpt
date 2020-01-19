@@ -1,0 +1,227 @@
+<!-- - - - q4 gui - - - &* - - - -->
+<!doctype html>
+<style>
+	body{background-color:#000000;}
+	button{	position:fixed;	top:0%; width:10%; height:5%; 
+			margin:0px; border:none; text-decoration: none; 
+			font-size:12px; font-family:sans-serif;
+			font-weight:bolder;
+			background-color:#000000; color:#dddddd;  
+        	font-family:sans-serif;}
+	button:hover { background-color:#335533; }
+	button:active{ background-color:#333355; } 
+</style>
+
+<button id="btn_force" style="left:0%;">Force</button>
+<button id="btn_fixed" style="left:10%;">Fixed Pt</button>
+<button id="btn_elem"  style="left:20%;">Element</button>
+<button id="btn_label" style="left:30%;">Label</button>
+<button id="btn_solve"  style="left:40%;">Solve</button>
+
+<canvas id='canvas' style= 
+	"position:fixed; left:0%; top:5%; height:95%; width:50%;
+	 background-color:#cccccc;">
+</canvas> 
+
+<div id='div' style=
+	"position:fixed; left:50%; top:5%; height:95%; width:50%;
+	 background-color:#222222; color:#ffffff;
+	 padding:10px;
+	 font-size:20px;
+	 font-family:monospace;"> 
+</div>
+
+<script>
+/*------------------------- variables -----------------------*/
+let btn_force = document.getElementById('btn_force');
+let btn_fixed = document.getElementById('btn_fixed');
+let btn_elem  = document.getElementById('btn_elem');
+let btn_solve = document.getElementById('btn_solve');
+let btn_label = document.getElementById('btn_label');
+let div       = document.getElementById('div');
+let canvas    = document.getElementById('canvas');
+
+let ctx = canvas.getContext('2d');
+
+let mouse_over = 0;
+let mouse_down = 0;
+let mouse_pos = [0,0];
+let grid_pos  = [0,0];
+
+let canvas_pos = []; update_canvas_pos();
+let ax_pos     = [.05,.05,.9,.9];  
+let ax_lims    = [0,0,10,10];		
+let gui_mode   = 'add_elements';
+
+let node_coords = [];
+let el_nodes = [];
+
+/*---------------------------- loop ----------------------*/
+update_canvas_pos();
+main_loop();
+
+function main_loop() {
+	ctx.clearRect(0,0,canvas_pos[2], canvas_pos[3]);
+
+	if (mouse_down == 1) {
+		if (mouse_over == 1) {
+			add_el(grid_pos[0], grid_pos[1], 1, 1);}}
+
+	draw_axes();
+	draw_elements();
+	draw_labels();
+	draw_pointer();
+	display_data();
+
+	requestAnimationFrame(main_loop);}
+
+/*------------------------- mouse -------------------------*/
+document.onmousedown = () => { mouse_down = 1; }
+document.onmouseup   = () => { mouse_down = 0; }
+document.onmousemove = (e) => {
+	let c_n_x =     (e.clientX - canvas_pos[0])/canvas_pos[2];	
+	let c_n_y = 1 - (e.clientY - canvas_pos[1])/canvas_pos[3]; 
+	let a_n_x = (c_n_x - ax_pos[0])/ax_pos[2];
+	let a_n_y = (c_n_y - ax_pos[1])/ax_pos[3];
+	
+	mouse_pos[0] = ax_lims[0] + ax_lims[2]*a_n_x;
+	mouse_pos[1] = ax_lims[1] + ax_lims[3]*a_n_y; 
+	grid_pos[0]  = Math.floor(mouse_pos[0]);
+	grid_pos[1]  = Math.floor(mouse_pos[1]);
+
+	if (mouse_pos[0] < ax_lims[0] || 
+	    mouse_pos[0] > ax_lims[0] + ax_lims[2] ||
+	    mouse_pos[1] < ax_lims[1] || 
+	    mouse_pos[1] > ax_lims[1] + ax_lims[3]) {
+		mouse_over = 0;}
+	else {mouse_over = 1; }}
+
+/*------------------------ drawing --------------------------*/
+function draw_axes() {
+ 	box( ax_lims[0], ax_lims[1], ax_lims[2], ax_lims[3], '#eeeeee');
+ 	rect(ax_lims[0], ax_lims[1], ax_lims[2], ax_lims[3], '#000000');
+ 	
+	ctx.fillStyle    = '#000000';
+	ctx.textBaseline = 'top';
+	ctx.textAlign    = 'center';
+	ctx.font = '16px mono';
+	for (let x = 0; x < 11; x++) {
+		ctx.fillText(x, canvas_x(x), canvas_y(0) + 2);}
+
+	ctx.textBaseline = 'middle';
+	ctx.textAlign    = 'right';
+	for (let y = 1; y < 11; y++) {
+		ctx.fillText(y, canvas_x(0)-2, canvas_y(y));}}
+
+function draw_pointer() {
+	if (mouse_over == 1) {
+	if (gui_mode == 'add_elements') {
+		ctx.fillStyle = '#008800';
+		ctx.globalAlpha = .4;
+		box(grid_pos[0], grid_pos[1], 1, 1);
+		ctx.globalAlpha = 1; }}}
+
+function box(x, y, w, h, color = '#000044') {
+	ctx.fillStyle = color;
+	let cx = canvas_x(x);
+	let cy = canvas_y(y);	
+	let cw = canvas_w(w);
+	let ch = canvas_h(h);
+	ctx.fillRect(cx, cy, cw, -ch);}
+	
+function rect(x, y, w, h, color = '#000044') {
+	ctx.strokeStyle = color;
+	let cx = canvas_x(x);
+	let cy = canvas_y(y);	
+	let cw = canvas_w(w);
+	let ch = canvas_h(h);
+	ctx.strokeRect(cx, cy, cw, -ch);}
+
+function update_canvas_pos() {
+	canvas_pos[0] = canvas.getBoundingClientRect().x;
+	canvas_pos[1] = canvas.getBoundingClientRect().y;
+	canvas_pos[2] = canvas.getBoundingClientRect().width;
+	canvas_pos[3] = canvas.getBoundingClientRect().height;
+	canvas.width  = canvas_pos[2]; 
+	canvas.height = canvas_pos[3];}
+
+function canvas_x(x) {
+	let cx=(ax_pos[0]+(x-ax_lims[0])/ax_lims[2]*ax_pos[2])*canvas.width;
+	return cx;}
+
+function canvas_y(y) {
+	let cy=canvas.height*( 1 - ax_pos[1] - 
+		(y-ax_lims[1])/ax_lims[3]*ax_pos[3]);
+	return cy;}
+
+function canvas_w(w) {
+	return w/ax_lims[2]*canvas.width*ax_pos[2];}
+
+function canvas_h(h) {
+	return h/ax_lims[3]*canvas.height*ax_pos[3];}
+
+/*---------------------- finite element -------------------*/
+function draw_elements() {
+	for (let i = 0; i < el_nodes.length/4; i++) {
+		let nx = node_coords[2*el_nodes[4*i]];
+		let ny = node_coords[2*el_nodes[4*i] + 1];
+		box(nx, ny, 1, 1, '#222222');}}
+
+function draw_labels() {
+	ctx.textAlign    = 'center';
+	ctx.textBaseline = 'middle';
+	ctx.font = '16px arial bold';
+	ctx.fillStyle = '#ffffff';
+	for (let e = 0; e < el_nodes.length/4; e++) {
+		let ex = node_coords[2*el_nodes[4*e]  ] + .5;
+		let ey = node_coords[2*el_nodes[4*e]+1] + .5;
+		ctx.fillText(e, canvas_x(ex), canvas_y(ey));}
+
+	ctx.font = '10px arial bold';
+	ctx.fillStyle = '#00aaff';
+	for (let n = 0; n < node_coords.length/2; n++) {
+		let nx = node_coords[2*n];
+		let ny = node_coords[2*n+1];
+		ctx.fillText(n, canvas_x(nx), canvas_y(ny));}}
+
+function add_el(x,y,w,h) {
+	let el_is_new = 1;
+	for (let i = 0; i < el_nodes.length/4; i++) {
+		let n0x = node_coords[2*el_nodes[4*i]  ];
+		let n0y = node_coords[2*el_nodes[4*i]+1];
+		if (x == n0x && y == n0y) {
+			el_is_new = 0;}}
+
+	if (el_is_new == 1){
+		let X = [x,     x+w, 	x+w,	x];
+		let Y = [y,		y, 		y+h,  	y+h];
+		for (let q = 0; q < 4; q++) {
+			let is_new = 1;
+			let idx = 0;
+			for (let i = 0; i < node_coords.length/2; i++) {
+				let nx = node_coords[2*i];
+				let ny = node_coords[2*i+1];
+				if (Math.abs(nx-X[q]) < .01 && 
+					Math.abs(ny-Y[q]) < .01) {	
+					idx = i;
+					is_new = 0;}}
+			if (is_new == 1) { 
+				el_nodes.push(node_coords.length/2);
+				node_coords.push(X[q], Y[q]);}
+			else {
+				el_nodes.push(idx);}}}}
+
+function display_data() {
+	div.innerHTML = 
+	`mouse x: ${mouse_pos[0]} <br>
+	 mouse y: ${mouse_pos[1]} <br> 
+	 mouse over: ${mouse_over} <br><br>
+     grid x: ${ grid_pos[0] } <br> 
+     grid y: ${ grid_pos[1] } <br> <br>
+     canvas x: ${canvas_x(mouse_pos[0]).toFixed()} <br>
+     canvas y: ${canvas_y(mouse_pos[1]).toFixed()} <br> <br>
+	 num nodes: ${node_coords.length/2} <br>
+	 num elems: ${el_nodes.length/4} <br> <br>
+`;}
+
+</script>
