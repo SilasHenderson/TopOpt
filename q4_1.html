@@ -7,7 +7,6 @@
 
 <script>
 
-
 // axes info
 let ax_pos     = [.1, .4,.6,.5];  
 let ax_lims    = [ 0, 0, 100, 100];	
@@ -60,23 +59,23 @@ function loop() {
 
 /*--------------------------- solve -------------------------*/
 function make_k0_el(E = 100, nu = .3) {  
-	let	k1 = ( 1/2 -   nu/6 )*E/(1-nu*nu);
+	let k1 = ( 1/2 -   nu/6 )*E/(1-nu*nu);
 	let k2 = ( 1/8 +   nu/8 )*E/(1-nu*nu);
-	let	k3 = (-1/4 -   nu/12)*E/(1-nu*nu);
+	let k3 = (-1/4 -   nu/12)*E/(1-nu*nu);
 	let k4 = (-1/8 + 3*nu/8 )*E/(1-nu*nu);
-	let	k5 = (-1/4 +   nu/12)*E/(1-nu*nu);
+	let k5 = (-1/4 +   nu/12)*E/(1-nu*nu);
 	let k6 = (-1/8 -   nu/8 )*E/(1-nu*nu);
-	let	k7 = (         nu/6 )*E/(1-nu*nu);
+	let k7 = (         nu/6 )*E/(1-nu*nu);
 	let k8 = ( 1/8 - 3*nu/8 )*E/(1-nu*nu);
 	return new Float32Array([
 		k1, k2, k3, k4, k5, k6, k7, k8,
-        k2, k1, k8, k7, k6, k5, k4, k3,
-       	k3, k8, k1, k6, k7, k4, k5, k2,
-       	k4, k7, k6, k1, k8, k3, k2, k5,
-        k5, k6, k7, k8, k1, k2, k3, k4,
-        k6, k5, k4, k3, k2, k1, k8, k7,
-        k7, k4, k5, k2, k3, k8, k1, k6,
-        k8, k3, k2, k5, k4, k7, k6, k1]);}
+        	k2, k1, k8, k7, k6, k5, k4, k3,
+       		k3, k8, k1, k6, k7, k4, k5, k2,
+       		k4, k7, k6, k1, k8, k3, k2, k5,
+        	k5, k6, k7, k8, k1, k2, k3, k4,
+        	k6, k5, k4, k3, k2, k1, k8, k7,
+        	k7, k4, k5, k2, k3, k8, k1, k6,
+        	k8, k3, k2, k5, k4, k7, k6, k1]);}
 
 function solve() {
 	let dof_from_DOF = [];
@@ -244,7 +243,6 @@ function draw() {
 			x += (node_xy[2*n  ] + node_dxy[2*n  ])/4;
 			y += (node_xy[2*n+1] + node_dxy[2*n+1])/4;}
 		let xy = canvas_xy([x,y]);
-		ctx.fillText(el, xy[0], xy[1]);}
-}
+		ctx.fillText(el, xy[0], xy[1]);}}
 
 </script>
