@@ -1,0 +1,250 @@
+<style> body{font-family:monospace;} </style>
+
+<h2> q4 element, solve w/ conjugate gradient </h2>
+<canvas id='canvas'> </canvas>
+
+<p id='info'> </p>
+
+<script>
+
+
+// axes info
+let ax_pos     = [.1, .4,.6,.5];  
+let ax_lims    = [ 0, 0, 100, 100];	
+
+// structure info
+let nelx = 4;
+let nely = 4;
+
+let fixed_nodes = [0,1,2,3,4];
+let force       = [20, 0,-10];
+
+let node_xy = [];
+let dx = ax_lims[2]/nelx;
+let dy = ax_lims[3]/nely;
+for (let j = 0; j < nely+1; j++) {	
+	for (let i = 0; i < nelx+1; i++) {
+		node_xy.push(j*dx, i*dy); } }
+
+let el_nodes = [];
+for (let j = 0; j < nelx; j++) {
+	for (let i = 0; i < nely; i++) {
+		el_nodes.push(
+			j*(nely+1) + i, 
+			(j+1)*(nely+1) + i, 
+			(j+1)*(nely+1) + i + 1, 
+			j*(nely+1) + i + 1 );}}
+
+let node_dxy = new Float32Array(node_xy.length).fill(0);
+
+// drawing context
+
+canvas.style.width  = canvas.width  = 300;
+canvas.style.height = canvas.height = 300;
+let ctx = canvas.getContext('2d');
+
+// solve/draw
+let iter_count = 1;
+
+loop();
+function loop() {
+	ctx.clearRect(0,0,canvas.width, canvas.height);
+
+	force = [20, -5*iter_count, -5*iter_count];
+	
+	solve();
+	draw();
+	
+	iter_count++;
+	if (iter_count < 100) requestAnimationFrame(loop);}
+
+/*--------------------------- solve -------------------------*/
+function make_k0_el(E = 100, nu = .3) {  
+	let	k1 = ( 1/2 -   nu/6 )*E/(1-nu*nu);
+	let k2 = ( 1/8 +   nu/8 )*E/(1-nu*nu);
+	let	k3 = (-1/4 -   nu/12)*E/(1-nu*nu);
+	let k4 = (-1/8 + 3*nu/8 )*E/(1-nu*nu);
+	let	k5 = (-1/4 +   nu/12)*E/(1-nu*nu);
+	let k6 = (-1/8 -   nu/8 )*E/(1-nu*nu);
+	let	k7 = (         nu/6 )*E/(1-nu*nu);
+	let k8 = ( 1/8 - 3*nu/8 )*E/(1-nu*nu);
+	return new Float32Array([
+		k1, k2, k3, k4, k5, k6, k7, k8,
+        k2, k1, k8, k7, k6, k5, k4, k3,
+       	k3, k8, k1, k6, k7, k4, k5, k2,
+       	k4, k7, k6, k1, k8, k3, k2, k5,
+        k5, k6, k7, k8, k1, k2, k3, k4,
+        k6, k5, k4, k3, k2, k1, k8, k7,
+        k7, k4, k5, k2, k3, k8, k1, k6,
+        k8, k3, k2, k5, k4, k7, k6, k1]);}
+
+function solve() {
+	let dof_from_DOF = [];
+	let DOF_from_dof = [];
+	let n = 0;
+	for (let N = 0; N < node_xy.length/2; N++) {
+		let fixed = false;
+		for (let i = 0; i < fixed_nodes.length; i++) {
+			if (N == fixed_nodes[i]) { fixed = true; }}
+		if (fixed == true) {
+			dof_from_DOF.push(-1,-1);}
+		else {
+			dof_from_DOF.push(2*n, 2*n + 1);
+			DOF_from_dof.push(2*N, 2*N + 1);
+			n++; }}
+
+	let el_dof = [];
+	for (let n = 0; n < el_nodes.length; n++) {
+		el_dof.push(
+			dof_from_DOF[2*el_nodes[n]], 
+			dof_from_DOF[2*el_nodes[n] + 1]);}
+
+	let k0_el = make_k0_el();
+	let k = [];
+	for (let e = 0; e < el_dof.length/8; e++) {
+		for (let i = 0; i < 8; i++) {
+			let I = el_dof[8*e + i];
+			for (let j = 0; j < 8; j++) {
+				let J = el_dof[8*e + j];
+				if (I != -1 && J != -1) {
+					k.push(I, J, k0_el[8*i + j]); }}}}
+
+	let dof = DOF_from_dof.length;
+	let u = new Float32Array(dof).fill(0);
+	let f = new Float32Array(dof).fill(0);
+	let p  = new Float32Array(dof).fill(0);
+	let r  = new Float32Array(dof).fill(0);
+	let kp = new Float32Array(dof).fill(0);
+	let ku = new Float32Array(dof).fill(0);
+	let rr = 0;
+
+	for (let i = 0; i < force.length/3; i++) {
+		let dof_x = dof_from_DOF[2*force[3*i]  ];
+		let dof_y = dof_from_DOF[2*force[3*i]+1];
+		if (n != -1) {
+			f[dof_x] += force[3*i+1];
+			f[dof_y] += force[3*i+2];} }
+	
+	ku.fill(0);
+	for (let i = 0; i < k.length/3; i++) {
+		ku[k[3*i]] += k[3*i+2]*u[k[3*i+1]]; }
+
+	for (let i = 0; i < dof; i++) {
+		p[i] = f[i] - ku[i];
+		r[i] = f[i] - ku[i];
+		rr  += r[i]*r[i];}
+
+	for (iter = 0; iter < dof; iter++) {	
+		kp.fill(0);
+		for (let i = 0; i < k.length/3; i++) {
+			kp[k[3*i]] += k[3*i+2]*p[k[3*i+1]]; }
+		let pkp = 0;
+		for (let i = 0; i < dof; i++) {
+			pkp += p[i]*kp[i]; }
+	
+		let rr_new = 0;
+		for (let i = 0; i < dof; i++) { 
+			u[i] += rr/pkp*p[i];
+			r[i] -= rr/pkp*kp[i]; 
+			rr_new += r[i]*r[i];}
+
+		for (let i = 0; i < dof; i++) {
+			p[i] = rr_new/rr*p[i] + r[i];}
+
+		rr = rr_new;
+		if (rr_new*rr_new < .00001) { break;} }
+
+	for (let i = 0; i < u.length; i++) {
+		node_dxy[DOF_from_dof[i]] = u[i];}}
+
+/*--------------------------- draw -------------------------*/
+function canvas_xy(xy) {
+	let w = canvas.width;
+	let h = canvas.height;
+	let cxy = [
+		w*(ax_pos[0]+(xy[0]-ax_lims[0])/ax_lims[2]*ax_pos[2]),
+		h*(1-ax_pos[1]- (xy[1]-ax_lims[1])/ax_lims[3]*ax_pos[3])]
+	return cxy;}
+
+function draw() {
+	// elements
+	ctx.font = 'bold 12px mono';
+	ctx.textBaseline = 'middle';
+	ctx.textAlign = 'center';
+
+	ctx.fillStyle = '#aaaaaa';
+	ctx.strokeStyle = '#555555';
+	for (let el = 0; el < el_nodes.length/4; el++) {
+		ctx.beginPath();
+		for (let i = 0; i < 4; i++) {
+			let n = el_nodes[4*el + i];
+			let x = node_xy[2*n  ] + node_dxy[2*n];
+			let y = node_xy[2*n+1] + node_dxy[2*n+1];
+			let cxy = canvas_xy([x,y]);
+			if (i==0) {	ctx.moveTo(cxy[0], cxy[1]);}
+			else {		ctx.lineTo(cxy[0], cxy[1]);}}
+		ctx.fill();
+		ctx.stroke();}
+
+	// fixed pts
+	ctx.fillStyle = '#ffffff';
+	ctx.strokeStyle = '#000000';
+	for (let i = 0; i < fixed_nodes.length; i++) {
+		let n = fixed_nodes[i];
+		let x = node_xy[2*n];
+		let y = node_xy[2*n+1];
+
+		let cxy = canvas_xy([x,y]);
+		ctx.fillRect(cxy[0] - 8, cxy[1]-8, 16,16);
+		ctx.strokeRect(cxy[0]-8,cxy[1]-8, 16, 16);}
+
+	// forces
+	ctx.strokeStyle = '#ff0000';
+	for (let i = 0; i < force.length/3; i++) {
+		let n = force[3*i];
+		let nx = node_xy[2*n]   + node_dxy[2*n];
+		let ny = node_xy[2*n+1] + node_dxy[2*n+1];
+		
+		let fx = force[3*i+1];
+		let fy = force[3*i+2];
+
+		let F = Math.sqrt(fx*fx + fy*fy);
+
+		let dx = fx/F*ax_lims[2]/10;
+		let dy = fy/F*ax_lims[3]/10;
+
+		let a0 = canvas_xy([ nx, ny]);
+		let aL = canvas_xy([ nx+.8*dx-.2*dy, ny+.8*dy+.2*dx]);
+		let aR = canvas_xy([ nx+.8*dx+.2*dy, ny+.8*dy-.2*dx]);
+		let a1 = canvas_xy([ nx+dx, ny+dy]);
+
+		ctx.beginPath();
+		ctx.moveTo(a0[0], a0[1]);
+		ctx.lineTo(a1[0], a1[1]);
+
+		ctx.moveTo(aL[0], aL[1]);
+		ctx.lineTo(a1[0], a1[1]);
+		ctx.lineTo(aR[0], aR[1]);
+		ctx.stroke();}
+
+	// labels
+	ctx.fillStyle = '#000000';
+	for (let n = 0; n < node_xy.length; n++) {
+		let xy = canvas_xy([ 
+			node_xy[2*n  ] + node_dxy[2*n  ],  
+			node_xy[2*n+1] + node_dxy[2*n+1]]);
+		ctx.fillText(n, xy[0], xy[1]);}
+
+	ctx.fillStyle = '#ffffff';
+	for (let el = 0; el < el_nodes.length/4; el++){
+		let x = 0;
+		let y = 0;
+		for (let i = 0; i < 4; i++) {
+			let n = el_nodes[4*el + i];
+			x += (node_xy[2*n  ] + node_dxy[2*n  ])/4;
+			y += (node_xy[2*n+1] + node_dxy[2*n+1])/4;}
+		let xy = canvas_xy([x,y]);
+		ctx.fillText(el, xy[0], xy[1]);}
+}
+
+</script>
