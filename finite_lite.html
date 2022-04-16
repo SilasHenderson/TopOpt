@@ -547,82 +547,135 @@ function draw_u() {
 			let u1x = u_global.get(2*n1, 0);	let u1y = u_global.get(2*n1+1, 0);
 			line(n0x + u0x, n0y + u0y, n1x + u1x, n1y + u1y);}}}
 
-function set_axis(xlow, xhigh, ylow, yhigh) {
-	axMid = (xhigh + xlow)/2;	ayMid = (yhigh + ylow)/2;
-	axRad = (xhigh - xlow)/2;	ayRad = (yhigh - ylow)/2;}
+function set_axis(xlow, xhigh, ylow, yhigh) 
+{
+    axMid = (xhigh + xlow)/2;	
+    ayMid = (yhigh + ylow)/2;
+    axRad = (xhigh - xlow)/2;	
+    ayRad = (yhigh - ylow)/2;
+}
 
-function set_axis_auto() {
-	let xmin = 100000; let xmax = -100000;
-	let ymin = 100000; let ymax = -100000;
-	for (let n = 0; n < nodes.length; n++) {
-		let nx = nodes[n][0];
-		let ny = nodes[n][1];
-		if (nx < xmin) {xmin = nx;}
-		if (ny < ymin) {ymin = ny;}
-		if (nx > xmax) {xmax = nx;}
-		if (ny > ymax) {ymax = ny;}}
-
-	axMid = Math.floor((xmax + xmin)/2 + .5); axRad = Math.floor(xmax-xmin)/1.5+1; 
-	ayMid = Math.floor((ymax + ymin)/2 + .5); ayRad = Math.floor(ymax-ymin)/1.5+1;}
-
-function draw_axis() {
-	axis.lineWidth = .2;		axis.strokeStyle = grid_color;
-	axis.textAlign = 'right'; 	axis.fillStyle   = grid_text_color;				
-	axis.font = '12px sans serif';
+function set_axis_auto()
+{
+    let xmin =  100000;
+    let xmax = -100000;
+    let ymin =  100000; 
+    let ymax = -100000;
 	
-	let xLow  = Math.floor(axMid - axRad); 	let xHigh = Math.ceil(axMid + axRad);
-	let yLow  = Math.floor(ayMid - ayRad); 	let yHigh = Math.ceil(ayMid + ayRad);
-	let dx = 1; if (axRad > 5) { dx = Math.floor(axRad/5); }
-	let dy = 1; if (ayRad > 5) { dy = Math.floor(ayRad/5); }
-	
-	for (let x = xLow;  x < axMid; x+=dx) { line(x,yLow,x,yHigh); text(x, 0, x);}
-	for (let x = axMid; x < xHigh; x+=dx) { line(x,yLow,x,yHigh); text(x, 0, x);}
-	for (let y = yLow;  y < ayMid; y+=dy) { line(xLow,y,xHigh,y); text(0, y, y);}
-	for (let y = ayMid; y < yHigh; y+=dy) { line(xLow,y,xHigh,y); text(0, y, y);}
+    for (let n = 0; n < nodes.length; n++) 
+    {
+        let nx = nodes[n][0];
+        let ny = nodes[n][1];
+	    
+        if (nx < xmin) xmin = nx;
+        if (ny < ymin) ymin = ny;
+        if (nx > xmax) xmax = nx;
+        if (ny > ymax) ymax = ny;
+    }
+    axMid = Math.floor((xmax + xmin)/2 + .5); 
+    ayMid = Math.floor((ymax + ymin)/2 + .5); 
+    axRad = Math.floor(xmax-xmin)/1.5+1; 
+    ayRad = Math.floor(ymax-ymin)/1.5+1;
+}
 
-	axis.lineWidth = 1;
-	line(xLow, 0, xHigh, 0);
-	line(0, yLow, 0, yHigh);}
+function draw_axis() 
+{
+    axis.lineWidth = .2;		
+    axis.strokeStyle = grid_color;
+    axis.textAlign = 'right'; 	
+    axis.fillStyle   = grid_text_color;				
+    axis.font = '12px sans serif';
+	
+    let xLow  = Math.floor(axMid - axRad); 	
+    let xHigh = Math.ceil(axMid + axRad);
+    let yLow  = Math.floor(ayMid - ayRad); 	
+    let yHigh = Math.ceil(ayMid + ayRad);
+	
+    let dx = 1; if (axRad > 5) dx = Math.floor(axRad/5);
+    let dy = 1; if (ayRad > 5) dy = Math.floor(ayRad/5);
+	
+    for (let x = xLow;  x < axMid; x+=dx) { line(x,yLow,x,yHigh); text(x, 0, x);}
+    for (let x = axMid; x < xHigh; x+=dx) { line(x,yLow,x,yHigh); text(x, 0, x);}
+    for (let y = yLow;  y < ayMid; y+=dy) { line(xLow,y,xHigh,y); text(0, y, y);}
+    for (let y = ayMid; y < yHigh; y+=dy) { line(xLow,y,xHigh,y); text(0, y, y);}
+
+    axis.lineWidth = 1;
+    line(xLow, 0, xHigh, 0);
+    line(0, yLow, 0, yHigh);
+}
 
 /*------------------------- Low-level Drawing Functions -----------------*/
-function clear_canvas() { axis.clearRect(0, 0, 2*cxRad, 2*cyRad);}
-
-function line(x0, y0, x1, y1) {
-	let cx0 =   (x0 - axMid)/axRad*cxRad + cxRad;
-	let cy0 =  -(y0 - ayMid)/ayRad*cyRad + cyRad;
-	let cx1 =   (x1 - axMid)/axRad*cxRad + cxRad;
-	let cy1 =  -(y1 - ayMid)/ayRad*cyRad + cyRad;
 	
-	axis.beginPath(); 		axis.moveTo(cx0, cy0);  
-	axis.lineTo(cx1, cy1); 	axis.stroke();}
+function clear_canvas() 
+{ 
+    axis.clearRect(0, 0, 2*cxRad, 2*cyRad);
+}
 
-function arrow(x0, y0, x1, y1) {
-	let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
-	let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
-	let cx1 =  (x1 - axMid)/axRad*cxRad + cxRad;
-	let cy1 = -(y1 - ayMid)/ayRad*cyRad + cyRad;
+function line(x0, y0, x1, y1) 
+{
+    let cx0 =    (x0 - axMid)/axRad*cxRad + cxRad;
+    let cy0 =  - (y0 - ayMid)/ayRad*cyRad + cyRad;
+    let cx1 =    (x1 - axMid)/axRad*cxRad + cxRad;
+    let cy1 =  - (y1 - ayMid)/ayRad*cyRad + cyRad;
+	
+    axis.beginPath(); 
+    axis.moveTo(cx0, cy0);  
+    axis.lineTo(cx1, cy1); 	
+    axis.stroke();
+}
 
-	let dx   = (cx1 - cx0);     			let dy   = (cy1 - cy0);	
-	let len  = Math.sqrt(dx*dx + dy*dy);	let w    = len/7;
-	let cos0 = dx/len;						let sin0 = dy/len;		
-	let ax1  = cx1-w*sin0-dx/7;  			let ay1  = cy1+w*cos0-dy/7;
-	let ax2  = cx1+w*sin0-dx/7;  			let ay2  = cy1-w*cos0-dy/7;
+function arrow(x0, y0, x1, y1) 
+{
+    let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
+    let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
+    let cx1 =  (x1 - axMid)/axRad*cxRad + cxRad;
+    let cy1 = -(y1 - ayMid)/ayRad*cyRad + cyRad;
 
-	axis.beginPath(); axis.moveTo(cx0, cy0); axis.lineTo(cx1, cy1);	axis.stroke();
-	axis.beginPath(); axis.moveTo(cx1, cy1); axis.lineTo(ax1, ay1);	axis.stroke();
-	axis.beginPath(); axis.moveTo(cx1, cy1); axis.lineTo(ax2, ay2);	axis.stroke();}
+    let dx   = (cx1 - cx0);  
+    let dy   = (cy1 - cy0);	
+    let len  = Math.sqrt(dx*dx + dy*dy);	
+    let w    = len/7;
+	
+    let cos0 = dx/len;						
+    let sin0 = dy/len;		
 
-function point(x0, y0) {
-	let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
-	let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
-	axis.fillRect(cx0 - 10, cy0 - 10, 20, 20);}
+    let ax1  = cx1-w*sin0-dx/7;  			
+    let ay1  = cy1+w*cos0-dy/7;
+    let ax2  = cx1+w*sin0-dx/7;  			
+    let ay2  = cy1-w*cos0-dy/7;
 
-function text(x, y, text, size = 10) {
-	let cx0 =  (x - axMid)/axRad*cxRad + cxRad;
-	let cy0 = -(y - ayMid)/ayRad*cyRad + cyRad;
-	axis.fillText(text, cx0, cy0);}
+    axis.beginPath();  
+    axis.moveTo(cx0, cy0); 
+    axis.lineTo(cx1, cy1); 
+    axis.stroke();
+	
+    axis.beginPath();  
+    axis.moveTo(cx1, cy1); 
+    axis.lineTo(ax1, ay1);	
+    axis.stroke();
+	
+    axis.beginPath(); 
+    axis.moveTo(cx1, cy1); 
+    axis.lineTo(ax2, ay2);	
+    axis.stroke();
+}
+
+function point(x0, y0) 
+{
+    let cx0 =  (x0 - axMid)/axRad*cxRad + cxRad;
+    let cy0 = -(y0 - ayMid)/ayRad*cyRad + cyRad;
+    axis.fillRect(cx0 - 10, cy0 - 10, 20, 20);
+}
+
+function text(x, y, text, size = 10) 
+{
+    let cx0 =  (x - axMid)/axRad*cxRad + cxRad;
+    let cy0 = -(y - ayMid)/ayRad*cyRad + cyRad;
+    axis.fillText(text, cx0, cy0);
+}
 
 /*--------------------- Short-cut Math functions --------------------------*/
+	
 function cos(x)  { return Math.cos(x);  }
 function sin(x)  { return Math.sin(x);  }
 function tan(x)  { return Math.tan(x);  }
@@ -631,48 +684,86 @@ function sqrt(x) { return Math.sqrt(x); }
 function rand()  { return Math.random();}
 
 /*------------------------ Keyboard Functions ------------------------*/
-document.onkeydown = function(e) {
-	if (e.key == 'Shift') {shiftDown = 1;}
-	if (e.key == 'Enter') {
-		enterDown = 1;
-		if (shiftDown == 1 && enterDown == 1) {
-			clear_data();
-			clear_canvas();
-			eval(paper.value);
-			e.preventDefault();}}}
-
-document.onkeyup = function(e) {
-	if (e.key == 'Shift') {shiftDown = 0;}
-	if (e.key == 'Enter') {enterDown = 0;}}
-
-function key_open() { paper.value = localStorage.script; print('--script opened--');}
-function key_save() { localStorage.script = paper.value; print('--script saved--');}
-
-function key_run() { clear_data(); clear_canvas(); eval(paper.value);}
-
-function key_view(){ 	
-	if (   theme_name == 'light'){ theme_name =  'dark';  canvas_dark(); }
-	else { theme_name = 'light';  canvas_light();}
-	if (   theme_name == 'data') {theme_name = 'light'; canvas_light();}}
 	
-function key_data() { theme_name == 'data'; canvas_data();}
+document.onkeydown = function(e)
+{
+    if (e.key == 'Shift') shiftDown = 1;
+    if (e.key == 'Enter') enterDown = 1;
+	
+    if (enterDown == 1 && shiftDown == 1) {
+        clear_data();
+        clear_canvas();
+        eval(paper.value);
+        e.preventDefault();
+    }
+}
 
-function key_new() {
-	clear_canvas(); 		clear_data();
-	page_docs_index = 0;	paper.value = page_docs[page_docs_index]; 
-	solve(); draw();
-	eval(paper.value);}
-
-function key_docs() { 
-	clear_canvas(); clear_data();
-	page_docs_index++;
-	if (page_docs_index >= page_docs.length) { 
-		page_docs_index = 0;}
-	paper.value = page_docs[page_docs_index]; 
-	eval(paper.value);}
+document.onkeyup = function(e) 
+{
+    if (e.key == 'Shift') shiftDown = 0;
+    if (e.key == 'Enter') enterDown = 0;
+}
+function key_open() 
+{ 
+    paper.value = localStorage.script; 
+    print('--script opened--');
+}
+function key_save()
+{ 
+    localStorage.script = paper.value; 
+    print('--script saved--');
+}
+function key_run() 
+{ 
+    clear_data(); 
+    clear_canvas(); 
+    eval(paper.value);
+}
+function key_view()
+{ 	
+    if (theme_name == 'light'){
+        theme_name = 'dark';  
+        canvas_dark(); 
+    }
+    else { 
+        theme_name = 'light';  
+        canvas_light();
+    }
+    if (theme_name == 'data') {
+        theme_name = 'light'; 
+	canvas_light();
+    }
+}
+function key_data() 
+{ 
+    theme_name == 'data'; 
+    canvas_data();
+}
+function key_new() 
+{
+    clear_canvas(); 	
+    clear_data();
+    page_docs_index = 0;
+    paper.value = page_docs[page_docs_index]; 
+    solve(); 
+    draw();
+    eval(paper.value);
+}
+function key_docs() 
+{ 
+    clear_canvas(); 
+    clear_data();
+    page_docs_index++;
+    if (page_docs_index >= page_docs.length) { 
+        page_docs_index = 0;
+    }
+    paper.value = page_docs[page_docs_index]; 
+    eval(paper.value);
+}
 
 /* ---------------------------- Examples ------------------------------*/
 function load_text() {
+	
 page_docs[0] = `
 // Define variables, then press Shift+Enter to execute
 
@@ -839,4 +930,5 @@ for (let i = 0; i < 12; i++) {
 elements.push([12, 1]);
 draw();`;}
 
-</script> </body> </html>
+</script> 
+</body>
