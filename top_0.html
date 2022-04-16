@@ -17,13 +17,14 @@
 document.body.style.backgroundColor = '#222222';
 
 var canvas = document.getElementById('canvas');
-	var lims  = canvas.getBoundingClientRect();
-	var cxMid = lims.x + lims.width/2;	var cxRad = lims.width/2;  
-	var cyMid = lims.y + lims.height/2;    	var cyRad = lims.height/2; 
-	canvas.width = 2*cxRad;			canvas.height = 2*cyRad;
+var lims  = canvas.getBoundingClientRect();
+var cxMid = lims.x + lims.width/2;		var cxRad = lims.width/2;  
+var cyMid = lims.y + lims.height/2;    	var cyRad = lims.height/2; 
+canvas.width  = 2*cxRad;			
+canvas.height = 2*cyRad;
 
 var axis = canvas.getContext("2d");		var axMid =  0; var ayMid = 0;
-	axis.imageSmoothingEnabled = false; 	var axRad =  7; var ayRad = 10; 
+	axis.imageSmoothingEnabled = false; var axRad =  7; var ayRad = 10; 
 
 /*--------------------------- Setup --------------------------------------*/
 var nelx = 10; 	var nu =  .3;  	var vol_frac = .3;	
