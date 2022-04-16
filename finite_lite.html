@@ -1,12 +1,14 @@
 <!-- finite-lite - - - - - - - - - - - - - - - - - - - - - - - - - $:\^# -->
 
-<head> 
-<link href='https://fonts.googleapis.com/css?family=Baloo' rel='stylesheet'> 
+<head> 	
+<link href='https://fonts.googleapis.com/css?family=Baloo' rel='stylesheet'> 	
 <style> 
     body { 
-        background-color:#333333;}
+        background-color:#333333;
+    }
     div, textarea, canvas {
-	position: fixed; }
+	position: fixed;
+    }
     button {   
         position:fixed; 
 	top:    0%; 
@@ -16,11 +18,14 @@
 	color: #bbbbbb; 
         background-color: #333333;
         font-size: 18;	
-        font-family: 'Baloo'; }
+        font-family: 'Baloo';
+    }
     button:hover { 
-	background-color: #334433; }
+	background-color: #334433; 
+    }
     button:active{ 
-	background-color: #333344; } 
+	background-color: #333344;
+    } 
 </style> 
 </head> 
 
@@ -234,85 +239,131 @@ function find_k_global() {
 }
 
 function find_free_nodes() {
-	free_nodes = [];
-	for (let n = 1; n < nodes.length+1; n++) {free_nodes.push(n);}
-	for (let i = 0; i < fixed_nodes.length; i++){
-		let fn = fixed_nodes[i];
-		free_nodes = free_nodes.filter(n => n != fn);}}
+	
+    free_nodes = [];
+    for (let n = 1; n < nodes.length+1; n++) free_nodes.push(n);
+
+    for (let i = 0; i < fixed_nodes.length; i++){
+        let fn = fixed_nodes[i];
+	free_nodes = free_nodes.filter(n => n != fn);
+    }
+}
 
 function find_k_reduced() {
-	k_reduced = new Sushi.Matrix(2*free_nodes.length, 2*free_nodes.length);	
-	for (var i = 0; i < free_nodes.length; i++) {
-		for (var j = 0; j < free_nodes.length; j++) {
-			let ni = free_nodes[i] - 1;
-			let nj = free_nodes[j] - 1;
-			k_reduced.set(2*i  , 2*j  , k_global.get(2*ni  , 2*nj));
-			k_reduced.set(2*i+1, 2*j  , k_global.get(2*ni+1, 2*nj));
-			k_reduced.set(2*i  , 2*j+1, k_global.get(2*ni  , 2*nj+1));
-			k_reduced.set(2*i+1, 2*j+1, k_global.get(2*ni+1, 2*nj+1));}}}
+    
+    k_reduced = new Sushi.Matrix(2*free_nodes.length, 2*free_nodes.length);	
+
+    for (var i = 0; i < free_nodes.length; i++) {
+        for (var j = 0; j < free_nodes.length; j++) {
+
+            let ni = free_nodes[i] - 1;
+            let nj = free_nodes[j] - 1;
+	
+            k_reduced.set(2*i  , 2*j  , k_global.get(2*ni  , 2*nj));
+            k_reduced.set(2*i+1, 2*j  , k_global.get(2*ni+1, 2*nj));
+            k_reduced.set(2*i  , 2*j+1, k_global.get(2*ni  , 2*nj+1));
+            k_reduced.set(2*i+1, 2*j+1, k_global.get(2*ni+1, 2*nj+1));
+	}
+    }
+}
 
 function find_forces() {
-	f_global = new Sushi.Matrix(2*nodes.length, 1); 
-	let f_index = node_force[0]-1;
 	
-	f_global.set(2*f_index,   0, node_force[1]);
-	f_global.set(2*f_index+1, 0, node_force[2]);
+    f_global = new Sushi.Matrix(2*nodes.length, 1); 
 
-	f_reduced = new Sushi.Matrix( 2*free_nodes.length, 1);
-	for	(var n = 0; n < Math.max( 0,free_nodes.length); n++) {
-		var N = free_nodes[n]-1;	
-		f_reduced.set(2*n,   0, f_global.get(2*N,   0));
-		f_reduced.set(2*n+1, 0, f_global.get(2*N+1, 0));}}
+    let f_index = node_force[0]-1;
+	
+    f_global.set(2*f_index,   0, node_force[1]);
+    f_global.set(2*f_index+1, 0, node_force[2]);
+
+    f_reduced = new Sushi.Matrix( 2*free_nodes.length, 1);
+	
+    for (var n = 0; n < Math.max( 0, free_nodes.length); n++) {
+        var N = free_nodes[n]-1;	
+        f_reduced.set(2*n,   0, f_global.get(2*N,   0));
+        f_reduced.set(2*n+1, 0, f_global.get(2*N+1, 0));
+    }
+}
 
 function find_u() {
-	let k_inverse = k_reduced.inverse();
-	u_reduced = Sushi.Matrix.mul(k_inverse, f_reduced);
-	u_global  = new Sushi.Matrix(2*nodes.length, 1);
+	
+    let k_inverse = k_reduced.inverse();
 
-	for (var n = 0; n< free_nodes.length; n++) {
-		var N = free_nodes[n] - 1;
-		u_global.set(2*N,   0, u_reduced.get(2*n,   0));
-		u_global.set(2*N+1, 0, u_reduced.get(2*n+1, 0));}}
+    u_reduced = Sushi.Matrix.mul(k_inverse, f_reduced);
+    u_global  = new Sushi.Matrix(2*nodes.length, 1);
+
+    for (var n = 0; n< free_nodes.length; n++) {
+        var N = free_nodes[n] - 1;
+        u_global.set(2*N,   0, u_reduced.get(2*n,   0));
+        u_global.set(2*N+1, 0, u_reduced.get(2*n+1, 0));}}
 
 function find_compliance() {
-	let f_reduced_t = f_reduced.t();
-	compliance = Sushi.Matrix.mul(f_reduced_t, u_reduced); }
+
+    compliance = Sushi.Matrix.mul(f_reduced.t(), u_reduced); 
+}
 
 function find_lengths() {
-	total_length = 0;
-	for (var el = 0; el < elements.length; el++) {
-		let n0  = elements[el][0]-1;			let n1  = elements[el][1]-1;
-		let dx  = nodes[n1][0]-nodes[n0][0];	let dy  = nodes[n1][1]-nodes[n0][1];
-		let len = sqrt(dx*dx + dy*dy);			total_length += len;
-		lengths.push(len); }}
+ 
+    total_length = 0;
+	
+    for (var el = 0; el < elements.length; el++) {
+        let n0  = elements[el][0]-1;			
+        let n1  = elements[el][1]-1;
+        let dx  = nodes[n1][0]-nodes[n0][0];	
+        let dy  = nodes[n1][1]-nodes[n0][1];
+        let len = sqrt(dx*dx + dy*dy);	
+	    
+        total_length += len;
+	lengths.push(len);
+    }
+}
 
 function find_volume() {
-	volume = 0;
-	for (var el = 0; el < elements.length; el++) {
-		volume += areas[el]*lengths[el];}}
+	
+    volume = 0;
+	
+    for (var el = 0; el < elements.length; el++) {
+        volume += areas[el]*lengths[el];
+    }
+}
 
 function find_order_mag() {
-	var order_mag_array = [];
-	if (k_global == null) {}
-	else { 	let k_min = Sushi.Matrix.min(k_global);
-			let k_max = Sushi.Matrix.max(k_global);
-		    order_mag_array.push(Math.abs(k_min).toFixed(0).toString().length);
-		    order_mag_array.push(Math.abs(k_max).toFixed(0).toString().length);}
-	if (u_global == null) {}
-	else { 	let u_min = Sushi.Matrix.min(u_global);
-			let u_max = Sushi.Matrix.max(u_global);
-		    order_mag_array.push(Math.abs(u_min).toFixed(0).toString().length);
-		    order_mag_array.push(Math.abs(u_max).toFixed(0).toString().length);}
-	if (f_global == null) {}
-	else {	let f_min = Sushi.Matrix.min(f_global);
-			let f_max = Sushi.Matrix.max(f_global);
-		    order_mag_array.push(Math.abs(f_min).toFixed(0).toString().length);
-		    order_mag_array.push(Math.abs(f_max).toFixed(0).toString().length);}
-	order_mag = 0;
-	for (let i = 0; i < order_mag_array.length; i++) {
-		if (order_mag_array[i] > order_mag) {
-			order_mag = order_mag_array[i];}}
-	print('order = ' + order_mag);}
+
+    var order_mag_array = [];
+
+    if (k_global != null) {
+	    
+        let k_min = Sushi.Matrix.min(k_global);
+        let k_max = Sushi.Matrix.max(k_global);
+
+        order_mag_array.push(Math.abs(k_min).toFixed(0).toString().length);
+        order_mag_array.push(Math.abs(k_max).toFixed(0).toString().length);
+    }
+    if (u_global != null) {
+	   
+        let u_min = Sushi.Matrix.min(u_global);
+        let u_max = Sushi.Matrix.max(u_global);
+
+        order_mag_array.push(Math.abs(u_min).toFixed(0).toString().length);
+        order_mag_array.push(Math.abs(u_max).toFixed(0).toString().length);
+    }
+    if (f_global != null) {
+	
+        let f_min = Sushi.Matrix.min(f_global);
+        let f_max = Sushi.Matrix.max(f_global);
+	    
+        order_mag_array.push(Math.abs(f_min).toFixed(0).toString().length);
+        order_mag_array.push(Math.abs(f_max).toFixed(0).toString().length);
+    }
+
+    order_mag = 0;
+    for (let i = 0; i < order_mag_array.length; i++) {
+        if (order_mag_array[i] > order_mag) {
+	    order_mag = order_mag_array[i];
+	}
+    }
+    print('order = ' + order_mag);
+}
 
 /*-------------------------- Print Functions -----------------------*/
 function print(data) { printout.innerHTML = data; }
