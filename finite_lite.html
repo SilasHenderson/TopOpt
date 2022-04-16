@@ -1,61 +1,105 @@
 <!-- finite-lite - - - - - - - - - - - - - - - - - - - - - - - - - $:\^# -->
-<html>
-<head> <link href='https://fonts.googleapis.com/css?family=Baloo' rel='stylesheet'> 
 
+<head> 
+<link href='https://fonts.googleapis.com/css?family=Baloo' rel='stylesheet'> 
 <style> 
-	body {  background-color:#333333;}
-	.key {  top:0%;         height:5%;      color:#bbbbbb;   
-          	left:0%;        width:5%;    	background-color:#333333;
-        	border:none;	font-size:18;	font-family:'Baloo';   position:fixed;}
-	.key:hover { background-color: #334433; }
-	.key:active{ background-color: #333344; } </style> </head> 
+    body { 
+        background-color:#333333;}
+    div, textarea, canvas {
+	position: fixed; }
+    button {   
+        position:fixed; 
+	top:    0%; 
+	width:  5%; 
+	height: 5%; 
+	border: none; 
+	color: #bbbbbb; 
+        background-color: #333333;
+        font-size: 18;	
+        font-family: 'Baloo'; }
+    button:hover { 
+	background-color: #334433; }
+    button:active{ 
+	background-color: #333344; } 
+</style> 
+</head> 
+
 <body> 
-<button class="key"onmousedown="key_open()"style="left:0%;">Open</button>
-<button class="key"onmousedown="key_save()"style="left:5%;">Save<button>
-<button class="key"onmousedown="key_run()"style="left:10%;">Run</button>
-<button class="key"onmousedown="key_new()"style="left:15%;">New </button>
-<button class="key"onmousedown="key_docs()"style="left:20%;">Docs</button>
-<button class="key"onmousedown="key_view()"style="left:95%;">Plot</button>
-<button class="key"onmousedown="key_data()"style="left:90%;">Data</button>
+	
+<button onmousedown = "key_open()" style = "left: 0%;">  Open </button>
+<button onmousedown = "key_save()" style = "left: 5%;">  Save </button>
+<button onmousedown = "key_run()"  style = "left: 10%;"> Run  </button>
+<button onmousedown = "key_new()"  style = "left: 15%;"> New  </button>
+<button onmousedown = "key_docs()" style = "left: 20%;"> Docs </button>
+<button onmousedown = "key_view()" style = "left: 95%;"> Plot </button>
+<button onmousedown = "key_data()" style = "left: 90%;"> Data </button>
 
-<textarea id='paper' spellcheck = 'false'
-    style="top:5%;      height:95%;     position:fixed; background-color:#dde3ee;
-           left:0%;     width:50%;    	font-size:18;   color:#000000;
-           border:none; outline:none;   padding:0; 
-           resize:none;"> </textarea>
+<textarea id='paper' spellcheck='false' style =
+    "top:     5%; 
+     left:    0%; 
+     width:  50%;
+     height: 95%;  
+     background-color:#dde3ee; 
+     color:#000000;
+     border:none; 
+     outline:none; 
+     resize:none; 
+     font-size:18;  
+     padding:0;"> 
+</textarea>
 
-<canvas id='canvas' 
-    style="top:5%;       height:75%;    background-color:#d7d9d8;
-           left:50%;     width:50%;     position:fixed;"> </canvas>
+<canvas id = 'canvas' style =
+    "top:     5%; 
+     left:   50%; 
+     width:  50%; 
+     height: 75%;    
+     background-color:#d7d9d8;"> 
+</canvas>
 
-<div style="top:80%;     height:1%;     background-color:#111111;
-            left:50%;    width:50%;     position:fixed;"> </div>
+<div style = 
+    "top:   80%; 
+     left:  50%;
+     width: 50%; 
+     height: 1%;
+     background-color:#111111;"> 
+</div>
 
-<div id='printout' 
-    style="top:81%;      height:19%;    background-color:#eaeaea;
-           left:50%;     width:50%;     color:#000000; 
-           font-size:18; position:fixed;"> </div>
+<div id = 'printout' style =
+   "top:    81%; 
+    left:   50%; 
+    width:  50%; 
+    height: 19%;    
+    background-color:#eaeaea;
+    color:#000000; 
+    font-size:18;"> 
+</div>
 
 <script src='sushi.js'> </script> <script> 
 
 /*-------------------------  Canvas -------------------------------------*/
+	
 var paper    = document.getElementById('paper');
 var printout = document.getElementById('printout');
 
 var canvas = document.getElementById('canvas');
-	var lims = canvas.getBoundingClientRect();
-	var cxMid  = lims.x + lims.width/2;			var cxRad  = lims.width/2;  
-	var cyMid  = lims.y + lims.height/2;    	var cyRad  = lims.height/2; 
-	var aspect = cxRad/cyRad;
+var lims = canvas.getBoundingClientRect();
+	
+var cxMid  = lims.x + lims.width/2;		
+var cyMid  = lims.y + lims.height/2; 
+var cxRad  = lims.width/2;  
+var cyRad  = lims.height/2; 
+	
+var aspect = cxRad/cyRad;
 
-	canvas.width  = 2*cxRad;
-	canvas.height = 2*cyRad;
+canvas.width  = 2*cxRad;
+canvas.height = 2*cyRad;
 
-var axis = canvas.getContext("2d");
-	axis.imageSmoothingEnabled = false;
+var axis = canvas.getContext("2d"); axis.imageSmoothingEnabled = false;
 
-	var axMid =  0; 			var ayMid = 0;
-	var axRad = 10*aspect; 		var ayRad = 10;
+var axMid =  0; 			
+var ayMid =  0;
+var axRad = 10*aspect; 		
+var ayRad = 10;
 
 var tab_selected = 1;
 var tab_1 = document.getElementById('_t1');
@@ -63,36 +107,41 @@ var tab_2 = document.getElementById('_t2');
 var tab_3 = document.getElementById('_t3');
 
 /*---------------------------- Variables --------------------------------*/
-var nodes       = [];	var elements = [];	var max_volume;
-var fixed_nodes = [];	var areas    = []; 	var volume;
-var free_nodes  = [];	var lengths  = [];	var total_length;
-var node_force  = []; 	var E;				var default_areas = Array(100).fill(8);
+	
+var nodes       = [];   var elements = [];    var max_volume;
+var fixed_nodes = [];   var areas    = [];    var volume;
+var free_nodes  = [];   var lengths  = [];    var total_length;
+var node_force  = [];   var E;                var default_areas = Array(100).fill(8);
 
-var k_global;	var k_reduced;  var compliance0;
-var f_global;	var f_reduced;	var compliance;
-var u_global;	var u_reduced;	var order_mag = 2;
+var k_global;   var k_reduced;  var compliance0;
+var f_global;   var f_reduced;	var compliance;
+var u_global;   var u_reduced;	var order_mag = 2;
 
 var shiftDown = 0;
 var enterDown = 0;
 
-var walkthru  = [];	 		var walkthru_index = 0; 
-var page_docs = [];			var page_docs_index = 0;
+var walkthru  = []; var walkthru_index = 0; 
+var page_docs = []; var page_docs_index = 0;
 
 var script_index = 1;	
+var theme_name   = 'light';
 
-var theme_name = 'light';
-
-var paper_color      = '#d7d9d8';	var paper_text_color    = '#000000';   
-var printout_color   = '#444444'; 	var printout_text_color = '#000000';
-	
-var canvas_color     = '#d7d9d8';
-var element_color    = '#334433';	var u_color             = '#4444aa';	
-var fixed_color      = '#555555';	var force_color         = '#880000';
-	
-var grid_color       = '#222222';	var grid_text_color     = '#441111';
-var el_label_color   = '#994444';	var node_label_color    = '#ffffff';
+var paper_color         = '#d7d9d8';	
+var paper_text_color    = '#000000';   
+var printout_color      = '#444444'; 	
+var printout_text_color = '#000000';
+var canvas_color        = '#d7d9d8';
+var element_color       = '#334433';	
+var fixed_color         = '#555555';	
+var u_color             = '#4444aa';
+var force_color         = '#880000';
+var grid_color          = '#222222';	
+var grid_text_color     = '#441111';
+var el_label_color      = '#994444';	
+var node_label_color    = '#ffffff';
 
 /*------------------------------- Initialize ----------------------------------*/
+	
 load_text();
 paper.style.font = '18px mono';
 printout.style.font = '14px mono';
@@ -101,42 +150,88 @@ eval(paper.value);
 walkthru_index = walkthru.length;
 
 /* ------------------------ High-Level Finite Element Functions -----------------*/
+	
 function solve() {
-	if (areas.length < 1) { areas = default_areas;}
-	find_k_global();	find_free_nodes();	find_k_reduced();
-	find_forces();		find_u();			find_compliance();
-	print('solved!');}
-
+	
+    if (areas.length < 1) areas = default_areas;
+	
+    find_k_global();	
+    find_free_nodes();	
+    find_k_reduced();
+    find_forces();		
+    find_u();			
+    find_compliance();
+    print('solved!');
+}
+	
 function clear_data() {
-	u_reduced = null;   u_global = null; 
-	k_reduced = null;	k_global = null;
-	f_reduced = null;	f_global = null;
-	nodes = [];			elements    = []; 	areas       = [];
-	node_force = []; 	fixed_nodes = [];	free_nodes  = []; }
+	
+    u_reduced = null;   
+    u_global  = null; 
+    k_reduced = null;	
+    k_global  = null;
+    f_reduced = null;	
+    f_global  = null;
+    nodes       = [];			
+    elements    = []; 
+    areas       = [];
+    node_force  = []; 
+    fixed_nodes = [];
+    free_nodes  = []; 
+}
 
 /*-------------- Low-Level Finite-Element Functions -----------------------*/
+	
 function find_k_global() {
-	if (areas.length == 0){ areas=[]; for (let i=0; i<1000;i++){areas.push(5);}}	
-	k_global = new Sushi.Matrix(2*nodes.length, 2*nodes.length);
-	for (var el = 0; el < elements.length; el++) {
-		var k_el = new Sushi.Matrix(2*nodes.length, 2*nodes.length);
+	
+    if (areas.length == 0){ 
+        areas=[]; 
+	for (let i=0; i<1000; i++){ 
+	    areas.push(5);
+	}
+    }	
+    k_global = new Sushi.Matrix(2*nodes.length, 2*nodes.length);
+    
+    for (var el = 0; el < elements.length; el++) {
+	    
+        var k_el = new Sushi.Matrix(2*nodes.length, 2*nodes.length);
 		
-		let n0  = elements[el][0]-1;	let n1 = elements[el][1]-1;
-		let n0x = nodes[n0][0];			var n1x = nodes[n1][0];
-		let n0y = nodes[n0][1];			var n1y = nodes[n1][1];
-		let dx  = (n1x - n0x);			let dy  = (n1y - n0y);		
-		let A   = areas[el];			let L   = Math.sqrt(dx*dx + dy*dy);
-		let c   = dx/L;					let s   = dy/L;
-		
-		k_el.set(2*n0, 2*n0  ,  c*c*E*A/L);	k_el.set(2*n0+1, 2*n0  ,  c*s*E*A/L);
-		k_el.set(2*n0, 2*n0+1,  c*s*E*A/L); k_el.set(2*n0+1, 2*n0+1,  s*s*E*A/L);	
-		k_el.set(2*n0, 2*n1  , -c*c*E*A/L);	k_el.set(2*n0+1, 2*n1  , -c*s*E*A/L);
-		k_el.set(2*n0, 2*n1+1, -c*s*E*A/L);	k_el.set(2*n0+1, 2*n1+1, -s*s*E*A/L);	
-		k_el.set(2*n1, 2*n0  , -c*c*E*A/L);	k_el.set(2*n1+1, 2*n0  , -c*s*E*A/L);
-		k_el.set(2*n1, 2*n0+1, -c*s*E*A/L);	k_el.set(2*n1+1, 2*n0+1, -s*s*E*A/L);	
-		k_el.set(2*n1, 2*n1,    c*c*E*A/L);	k_el.set(2*n1+1, 2*n1  ,  c*s*E*A/L);
-		k_el.set(2*n1, 2*n1+1,  c*s*E*A/L);	k_el.set(2*n1+1, 2*n1+1,  s*s*E*A/L);
-		k_global.add(k_el);}}
+	let n0  = elements[el][0]-1;	
+	let n1  = elements[el][1]-1;
+	    
+	let n0x = nodes[n0][0];			
+	let n0y = nodes[n0][1];		
+	var n1x = nodes[n1][0];
+        var n1y = nodes[n1][1];
+	    
+	let dx  = (n1x - n0x);			
+        let dy  = (n1y - n0y);	
+	    
+	let A   = areas[el];			
+	let L   = Math.sqrt(dx*dx + dy*dy);
+	let c   = dx/L;				
+	let s   = dy/L;
+	
+        k_el.set(2*n0,   2*n0,    c*c*E*A/L);	
+        k_el.set(2*n0+1, 2*n0,    c*s*E*A/L);
+        k_el.set(2*n0,   2*n0+1,  c*s*E*A/L); 
+        k_el.set(2*n0+1, 2*n0+1,  s*s*E*A/L);	
+        k_el.set(2*n0,   2*n1  , -c*c*E*A/L);	
+        k_el.set(2*n0+1, 2*n1  , -c*s*E*A/L);
+        k_el.set(2*n0,   2*n1+1, -c*s*E*A/L);	
+        k_el.set(2*n0+1, 2*n1+1, -s*s*E*A/L);	
+        k_el.set(2*n1,   2*n0  , -c*c*E*A/L);	
+        k_el.set(2*n1+1, 2*n0  , -c*s*E*A/L);
+        k_el.set(2*n1,   2*n0+1, -c*s*E*A/L);	
+        k_el.set(2*n1+1, 2*n0+1, -s*s*E*A/L);	
+        k_el.set(2*n1,   2*n1,    c*c*E*A/L);	
+        k_el.set(2*n1+1, 2*n1  ,  c*s*E*A/L);
+        k_el.set(2*n1,   2*n1+1,  c*s*E*A/L);	
+        k_el.set(2*n1+1, 2*n1+1,  s*s*E*A/L);
+	    
+	k_global.add(k_el);
+    }
+}
 
 function find_free_nodes() {
 	free_nodes = [];
