@@ -90,11 +90,10 @@ function solve() {
     let DOF_from_dof = [];
     let n = 0;
     
-    for (let N = 0; N < node_xy.length/2; N++) {
-        
+    for (let N = 0; N < node_xy.length/2; N++) {    
         let fixed = false;
         for (let i = 0; i < fixed_nodes.length; i++) {
-            if (N == fixed_nodes[i]) { fixed = true; }
+            if (N == fixed_nodes[i]) fixed = true;
 	}
         if (fixed == true) {
 	    dof_from_DOF.push(-1,-1);
@@ -117,11 +116,10 @@ function solve() {
             let I = el_dof[8*e + i];
             for (let j = 0; j < 8; j++) {
                 let J = el_dof[8*e + j];
-                if (I != -1 && J != -1) { k.push(I, J, k0_el[8*i + j]); }
+                if (I != -1 && J != -1) k.push(I, J, k0_el[8*i + j]);
 	    }
         }
     }
-
     let dof = DOF_from_dof.length;
     let u = new Float32Array(dof).fill(0);
     let f = new Float32Array(dof).fill(0);
@@ -176,14 +174,12 @@ function solve() {
 }
 
 /*--------------------------- draw -------------------------*/
-function canvas_xy(xy) {
-    
-    let w = canvas.width;
-    let h = canvas.height;
-    
+	
+function canvas_xy(xy) { 
+
     let cxy = [
-        w*(ax_pos[0]+(xy[0]-ax_lims[0])/ax_lims[2]*ax_pos[2]),
-        h*(1-ax_pos[1]- (xy[1]-ax_lims[1])/ax_lims[3]*ax_pos[3])
+        canvas.width*(ax_pos[0]+(xy[0]-ax_lims[0])/ax_lims[2]*ax_pos[2]),
+        canvas.height*(1-ax_pos[1]- (xy[1]-ax_lims[1])/ax_lims[3]*ax_pos[3])
     ]
     return cxy;
 }
@@ -191,17 +187,14 @@ function canvas_xy(xy) {
 function draw() {
 	
     // elements
-	
     ctx.font = 'bold 12px mono';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#aaaaaa';
     ctx.strokeStyle = '#555555';
 	
-    for (let el = 0; el < el_nodes.length/4; el++) {
-	    
-        ctx.beginPath();
-	    
+    for (let el = 0; el < el_nodes.length/4; el++) {  
+        ctx.beginPath();    
         for (let i = 0; i < 4; i++) {
             let n = el_nodes[4*el + i];
             let x = node_xy[2*n  ] + node_dxy[2*n];
@@ -218,25 +211,20 @@ function draw() {
     }
 
     // fixed pts
-	
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#000000';
     
-    for (let i = 0; i < fixed_nodes.length; i++) {
-	    
+    for (let i = 0; i < fixed_nodes.length; i++) {    
         let n = fixed_nodes[i];
         let x = node_xy[2*n];
         let y = node_xy[2*n+1];
-        let cxy = canvas_xy([x,y]);
-	    
+        let cxy = canvas_xy([x,y]);   
         ctx.fillRect(cxy[0] - 8, cxy[1]-8, 16,16);
         ctx.strokeRect(cxy[0]-8,cxy[1]-8, 16, 16);
     }
 
     // forces
-    
     ctx.strokeStyle = '#ff0000';
-	
     for (let i = 0; i < force.length/3; i++) {
 	    
         let n = force[3*i];
@@ -255,39 +243,31 @@ function draw() {
         let aR = canvas_xy([ nx+.8*dx+.2*dy, ny+.8*dy-.2*dx]);
         let a1 = canvas_xy([ nx+dx, ny+dy]);
 
-        ctx.beginPath();
-	    
+        ctx.beginPath();    
         ctx.moveTo(a0[0], a0[1]);
         ctx.lineTo(a1[0], a1[1]);
         ctx.moveTo(aL[0], aL[1]);
         ctx.lineTo(a1[0], a1[1]);
-        ctx.lineTo(aR[0], aR[1]);
-	    
+        ctx.lineTo(aR[0], aR[1]); 
         ctx.stroke();
     }
 
-    // labels
-	
+    // node labels
     ctx.fillStyle = '#000000';
-	
-    for (let n = 0; n < node_xy.length; n++) {
-	    
+    for (let n = 0; n < node_xy.length; n++) {    
         let xy = canvas_xy([ 
             node_xy[2*n  ] + node_dxy[2*n  ],  
             node_xy[2*n+1] + node_dxy[2*n+1]
 	]);
         ctx.fillText(n, xy[0], xy[1]);
     }
-	
+    
+    // element labels
     ctx.fillStyle = '#ffffff';
-	
-    for (let el = 0; el < el_nodes.length/4; el++){
-	    
+    for (let el = 0; el < el_nodes.length/4; el++){   
         let x = 0;
-        let y = 0;
-	    
-        for (let i = 0; i < 4; i++) {
-		
+        let y = 0;    
+        for (let i = 0; i < 4; i++) {	
             let n = el_nodes[4*el + i];
             x += (node_xy[2*n  ] + node_dxy[2*n  ])/4;
             y += (node_xy[2*n+1] + node_dxy[2*n+1])/4;
@@ -296,5 +276,4 @@ function draw() {
 	ctx.fillText(el, xy[0], xy[1]);
     }
 }
-
 </script>
