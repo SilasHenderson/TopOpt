@@ -22,17 +22,21 @@ let node_xy = [];
 let dx = ax_lims[2]/nelx;
 let dy = ax_lims[3]/nely;
 for (let j = 0; j < nely+1; j++) {	
-	for (let i = 0; i < nelx+1; i++) {
-		node_xy.push(j*dx, i*dy); } }
+    for (let i = 0; i < nelx+1; i++) {
+        node_xy.push(j*dx, i*dy); 
+    } 
+}
 
 let el_nodes = [];
 for (let j = 0; j < nelx; j++) {
-	for (let i = 0; i < nely; i++) {
-		el_nodes.push(
-			j*(nely+1) + i, 
-			(j+1)*(nely+1) + i, 
-			(j+1)*(nely+1) + i + 1, 
-			j*(nely+1) + i + 1 );}}
+    for (let i = 0; i < nely; i++) {
+        el_nodes.push(
+            j*(nely+1) + i, 
+            (j+1)*(nely+1) + i, 
+            (j+1)*(nely+1) + i + 1, 
+            j*(nely+1) + i + 1 );
+    }
+}
 
 let node_dxy = new Float32Array(node_xy.length).fill(0);
 
@@ -43,6 +47,7 @@ canvas.style.height = canvas.height = 300;
 let ctx = canvas.getContext('2d');
 
 // solve/draw
+	
 let iter_count = 1;
 
 loop();
@@ -58,103 +63,120 @@ function loop() {
 	if (iter_count < 100) requestAnimationFrame(loop);}
 
 /*--------------------------- solve -------------------------*/
+	
 function make_k0_el(E = 100, nu = .3) {  
-	let k1 = ( 1/2 -   nu/6 )*E/(1-nu*nu);
-	let k2 = ( 1/8 +   nu/8 )*E/(1-nu*nu);
-	let k3 = (-1/4 -   nu/12)*E/(1-nu*nu);
-	let k4 = (-1/8 + 3*nu/8 )*E/(1-nu*nu);
-	let k5 = (-1/4 +   nu/12)*E/(1-nu*nu);
-	let k6 = (-1/8 -   nu/8 )*E/(1-nu*nu);
-	let k7 = (         nu/6 )*E/(1-nu*nu);
-	let k8 = ( 1/8 - 3*nu/8 )*E/(1-nu*nu);
-	return new Float32Array([
-		k1, k2, k3, k4, k5, k6, k7, k8,
-        	k2, k1, k8, k7, k6, k5, k4, k3,
-       		k3, k8, k1, k6, k7, k4, k5, k2,
-       		k4, k7, k6, k1, k8, k3, k2, k5,
-        	k5, k6, k7, k8, k1, k2, k3, k4,
-        	k6, k5, k4, k3, k2, k1, k8, k7,
-        	k7, k4, k5, k2, k3, k8, k1, k6,
-        	k8, k3, k2, k5, k4, k7, k6, k1]);}
+	
+    let k1 = ( 1/2 -   nu/6 )*E/(1-nu*nu);
+    let k2 = ( 1/8 +   nu/8 )*E/(1-nu*nu);
+    let k3 = (-1/4 -   nu/12)*E/(1-nu*nu);
+    let k4 = (-1/8 + 3*nu/8 )*E/(1-nu*nu);
+    let k5 = (-1/4 +   nu/12)*E/(1-nu*nu);
+    let k6 = (-1/8 -   nu/8 )*E/(1-nu*nu);
+    let k7 = (         nu/6 )*E/(1-nu*nu);
+    let k8 = ( 1/8 - 3*nu/8 )*E/(1-nu*nu);
+	
+    return new Float32Array([
+        k1, k2, k3, k4, k5, k6, k7, k8,
+        k2, k1, k8, k7, k6, k5, k4, k3,
+        k3, k8, k1, k6, k7, k4, k5, k2,
+        k4, k7, k6, k1, k8, k3, k2, k5,
+        k5, k6, k7, k8, k1, k2, k3, k4,
+        k6, k5, k4, k3, k2, k1, k8, k7,
+        k7, k4, k5, k2, k3, k8, k1, k6,
+        k8, k3, k2, k5, k4, k7, k6, k1
+    ]);
+}
 
 function solve() {
-	let dof_from_DOF = [];
-	let DOF_from_dof = [];
-	let n = 0;
-	for (let N = 0; N < node_xy.length/2; N++) {
-		let fixed = false;
-		for (let i = 0; i < fixed_nodes.length; i++) {
-			if (N == fixed_nodes[i]) { fixed = true; }}
-		if (fixed == true) {
-			dof_from_DOF.push(-1,-1);}
-		else {
-			dof_from_DOF.push(2*n, 2*n + 1);
-			DOF_from_dof.push(2*N, 2*N + 1);
-			n++; }}
-
-	let el_dof = [];
-	for (let n = 0; n < el_nodes.length; n++) {
-		el_dof.push(
-			dof_from_DOF[2*el_nodes[n]], 
-			dof_from_DOF[2*el_nodes[n] + 1]);}
-
-	let k0_el = make_k0_el();
-	let k = [];
-	for (let e = 0; e < el_dof.length/8; e++) {
-		for (let i = 0; i < 8; i++) {
-			let I = el_dof[8*e + i];
-			for (let j = 0; j < 8; j++) {
-				let J = el_dof[8*e + j];
-				if (I != -1 && J != -1) {
-					k.push(I, J, k0_el[8*i + j]); }}}}
-
-	let dof = DOF_from_dof.length;
-	let u = new Float32Array(dof).fill(0);
-	let f = new Float32Array(dof).fill(0);
-	let p  = new Float32Array(dof).fill(0);
-	let r  = new Float32Array(dof).fill(0);
-	let kp = new Float32Array(dof).fill(0);
-	let ku = new Float32Array(dof).fill(0);
-	let rr = 0;
-
-	for (let i = 0; i < force.length/3; i++) {
-		let dof_x = dof_from_DOF[2*force[3*i]  ];
-		let dof_y = dof_from_DOF[2*force[3*i]+1];
-		if (n != -1) {
-			f[dof_x] += force[3*i+1];
-			f[dof_y] += force[3*i+2];} }
 	
-	ku.fill(0);
-	for (let i = 0; i < k.length/3; i++) {
-		ku[k[3*i]] += k[3*i+2]*u[k[3*i+1]]; }
+    let dof_from_DOF = [];
+    let DOF_from_dof = [];
+    let n = 0;
+    
+    for (let N = 0; N < node_xy.length/2; N++) {
+        
+        let fixed = false;
+        for (let i = 0; i < fixed_nodes.length; i++) {
+            if (N == fixed_nodes[i]) { fixed = true; }
+	}
+        if (fixed == true) {
+	    dof_from_DOF.push(-1,-1);
+	} else {
+            dof_from_DOF.push(2*n, 2*n + 1);
+            DOF_from_dof.push(2*N, 2*N + 1);
+            n++; 
+        }
+    }
+    let el_dof = [];
+    for (let n = 0; n < el_nodes.length; n++) {
+        el_dof.push(
+            dof_from_DOF[2*el_nodes[n]], 
+            dof_from_DOF[2*el_nodes[n] + 1]);
+    }
+    let k0_el = make_k0_el();
+    let k = [];
+    for (let e = 0; e < el_dof.length/8; e++) {
+        for (let i = 0; i < 8; i++) {
+            let I = el_dof[8*e + i];
+            for (let j = 0; j < 8; j++) {
+                let J = el_dof[8*e + j];
+                if (I != -1 && J != -1) { k.push(I, J, k0_el[8*i + j]); }
+	    }
+        }
+    }
 
-	for (let i = 0; i < dof; i++) {
-		p[i] = f[i] - ku[i];
-		r[i] = f[i] - ku[i];
-		rr  += r[i]*r[i];}
+    let dof = DOF_from_dof.length;
+    let u = new Float32Array(dof).fill(0);
+    let f = new Float32Array(dof).fill(0);
+    let p  = new Float32Array(dof).fill(0);
+    let r  = new Float32Array(dof).fill(0);
+    let kp = new Float32Array(dof).fill(0);
+    let ku = new Float32Array(dof).fill(0);
+    let rr = 0;
 
-	for (iter = 0; iter < dof; iter++) {	
-		kp.fill(0);
-		for (let i = 0; i < k.length/3; i++) {
-			kp[k[3*i]] += k[3*i+2]*p[k[3*i+1]]; }
-		let pkp = 0;
-		for (let i = 0; i < dof; i++) {
-			pkp += p[i]*kp[i]; }
+    for (let i = 0; i < force.length/3; i++) {
+        let dof_x = dof_from_DOF[2*force[3*i]  ];
+        let dof_y = dof_from_DOF[2*force[3*i]+1];
+        if (n != -1) {
+            f[dof_x] += force[3*i+1];
+            f[dof_y] += force[3*i+2];
+	} 
+    }
 	
-		let rr_new = 0;
-		for (let i = 0; i < dof; i++) { 
-			u[i] += rr/pkp*p[i];
-			r[i] -= rr/pkp*kp[i]; 
-			rr_new += r[i]*r[i];}
-
-		for (let i = 0; i < dof; i++) {
-			p[i] = rr_new/rr*p[i] + r[i];}
-
-		rr = rr_new;
-		if (rr_new*rr_new < .00001) { break;} }
-
-	for (let i = 0; i < u.length; i++) {
-		node_dxy[DOF_from_dof[i]] = u[i];}}
+    ku.fill(0);
+    for (let i = 0; i < k.length/3; i++) {
+        ku[k[3*i]] += k[3*i+2]*u[k[3*i+1]]; 
+    }
+    for (let i = 0; i < dof; i++) {
+        p[i] = f[i] - ku[i];
+        r[i] = f[i] - ku[i];
+        rr  += r[i]*r[i];
+    }
+    for (iter = 0; iter < dof; iter++) {	
+        kp.fill(0);
+        for (let i = 0; i < k.length/3; i++) {
+            kp[k[3*i]] += k[3*i+2]*p[k[3*i+1]]; 
+	}
+        let pkp = 0;
+        for (let i = 0; i < dof; i++) {
+            pkp += p[i]*kp[i]; 
+	}
+        let rr_new = 0;
+        for (let i = 0; i < dof; i++) { 
+	    u[i] += rr/pkp*p[i];
+	    r[i] -= rr/pkp*kp[i]; 
+	    rr_new += r[i]*r[i];
+	}
+        for (let i = 0; i < dof; i++) {
+	    p[i] = rr_new/rr*p[i] + r[i];
+	}
+	rr = rr_new;
+	if (rr_new*rr_new < .00001) { break;} 
+    }
+    for (let i = 0; i < u.length; i++) {
+        node_dxy[DOF_from_dof[i]] = u[i];
+    }
+}
 
 /*--------------------------- draw -------------------------*/
 function canvas_xy(xy) {
